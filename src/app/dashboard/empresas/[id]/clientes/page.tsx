@@ -221,7 +221,12 @@ export default function ClientesPage() {
                 {clientes.map((cliente) => (
                   <tr key={cliente.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {cliente.nome}
+                      <Link 
+                        href={`/dashboard/empresas/${empresaId}/clientes/${cliente.id}`}
+                        className="text-purple-600 hover:text-purple-900 hover:underline"
+                      >
+                        {cliente.nome}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {cliente.email}

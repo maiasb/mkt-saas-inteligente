@@ -8,13 +8,12 @@ export async function GET() {
     const [empresas] = await db.query(`
       SELECT 
         e.*,
-        COUNT(DISTINCT c.id) as clientes_count,
+        COUNT(DISTINCT CASE WHEN c.indicador_cliente_id IS NULL THEN c.id END) as clientes_count,
         COUNT(DISTINCT l.id) as links_count,
-        COUNT(DISTINCT u.id) as usuarios_indicados_count
+        COUNT(DISTINCT CASE WHEN c.indicador_cliente_id IS NOT NULL THEN c.id END) as usuarios_indicados_count
       FROM empresas e
       LEFT JOIN clientes c ON c.empresa_id = e.id
       LEFT JOIN links l ON l.empresa_id = e.id
-      LEFT JOIN usuarios_indicados u ON u.empresa_id = e.id
       GROUP BY e.id
       ORDER BY e.created_at DESC
     `);

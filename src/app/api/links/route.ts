@@ -10,11 +10,11 @@ export async function GET() {
         l.*,
         e.nome as empresa_nome,
         c.nome as cliente_nome,
-        COUNT(u.id) as usuarios_indicados_count
+        COUNT(DISTINCT ci.id) as usuarios_indicados_count
       FROM links l
       INNER JOIN empresas e ON e.id = l.empresa_id
       LEFT JOIN clientes c ON c.id = l.cliente_id
-      LEFT JOIN usuarios_indicados u ON u.link_id = l.id
+      LEFT JOIN clientes ci ON ci.link_id = l.id
       GROUP BY l.id
       ORDER BY l.created_at DESC
     `);

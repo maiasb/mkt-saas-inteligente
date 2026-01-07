@@ -6,9 +6,9 @@ export async function GET() {
     const [result] = await db.query(`
       SELECT 
         (SELECT COUNT(*) FROM empresas) as totalEmpresas,
-        (SELECT COUNT(*) FROM clientes) as totalClientes,
+        (SELECT COUNT(DISTINCT id) FROM clientes WHERE indicador_cliente_id IS NULL) as totalClientes,
         (SELECT COUNT(*) FROM links WHERE ativo = 1) as totalLinks,
-        (SELECT COUNT(*) FROM usuarios_indicados) as totalUsuariosIndicados
+        (SELECT COUNT(*) FROM clientes WHERE indicador_cliente_id IS NOT NULL) as totalUsuariosIndicados
     `);
 
     const stats = Array.isArray(result) ? result[0] : {};
