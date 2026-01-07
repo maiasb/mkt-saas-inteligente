@@ -44,6 +44,8 @@ export default function ClienteDetalhesPage() {
   const [links, setLinks] = useState<LinkCliente[]>([]);
   const [usuariosIndicados, setUsuariosIndicados] = useState<UsuarioIndicado[]>([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [pontuacaoTotal, setPontuacaoTotal] = useState(0);
+  const [indicacoesNivel, setIndicacoesNivel] = useState({ diretas: 0, indiretas: 0 });
 
   const fetchData = useCallback(async () => {
     try {
@@ -74,6 +76,32 @@ export default function ClienteDetalhesPage() {
       const todosClientes = await clientesIndicadosResponse.json();
       const indicados = todosClientes.filter((c: any) => c.indicador_cliente_id === clienteId);
       setUsuariosIndicados(indicados);
+
+      // Calcular pontuação recursiva (incluindo indicações indiretas)
+      const calcularPontuacaoRecursiva = (clienteIdParam: string, todosClientesParam: any[], nivel: number = 1): { pontos: number, diretas: number, indiretas: number } => {
+        const indicadosDiretos = todosClientesParam.filter((c: any) => c.indicador_cliente_id === clienteIdParam);
+        
+        let pontosDiretos = indicadosDiretos.length * 10; // 10 pontos por indicação direta
+        let pontosIndiretos = 0;
+        let contadorIndiretas = 0;
+        
+        // Para cada indicado direto, calcular pontuação dos indicados dele (recursivo)
+        indicadosDiretos.forEach((indicado: any) => {
+          const resultadoFilho = calcularPontuacaoRecursiva(indicado.id, todosClientesParam, nivel + 1);
+          pontosIndiretos += resultadoFilho.pontos * 0.5; // 50% dos pontos dos níveis inferiores
+          contadorIndiretas += resultadoFilho.diretas + resultadoFilho.indiretas;
+        });
+        
+        return {
+          pontos: pontosDiretos + pontosIndiretos,
+          diretas: indicadosDiretos.length,
+          indiretas: contadorIndiretas
+        };
+      };
+
+      const resultado = calcularPontuacaoRecursiva(clienteId, todosClientes);
+      setPontuacaoTotal(Math.round(resultado.pontos));
+      setIndicacoesNivel({ diretas: resultado.diretas, indiretas: resultado.indiretas });
 
       setIsLoading(false);
     } catch (error) {
@@ -114,9 +142,6 @@ export default function ClienteDetalhesPage() {
     }
   };
 
-  const totalIndicacoes = usuariosIndicados.length;
-  const pontuacao = totalIndicacoes * 10; // 10 pontos por indicação
-
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
@@ -154,12 +179,22 @@ export default function ClienteDetalhesPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Total de Indicações</p>
-                <p className="text-3xl font-bold text-purple-600">{totalIndicacoes}</p>
+                <p className="text-gray-500 text-sm">Indicações Diretas</p>
+                <p className="text-3xl font-bold text-purple-600">{indicacoesNivel.diretas}</p>
+              </div>
+              <div className="text-4xl">👤</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Indicações Indiretas</p>
+                <p className="text-3xl font-bold text-blue-600">{indicacoesNivel.indiretas}</p>
               </div>
               <div className="text-4xl">👥</div>
             </div>
@@ -168,8 +203,9 @@ export default function ClienteDetalhesPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Pontuação</p>
-                <p className="text-3xl font-bold text-green-600">{pontuacao}</p>
+                <p className="text-gray-500 text-sm">Pontuação Total</p>
+                <p className="text-3xl font-bold text-green-600">{pontuacaoTotal}</p>
+                <p className="text-xs text-gray-400 mt-1">Inclui rede completa</p>
               </div>
               <div className="text-4xl">⭐</div>
             </div>
@@ -179,10 +215,20 @@ export default function ClienteDetalhesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Links Gerados</p>
-                <p className="text-3xl font-bold text-blue-600">{links.length}</p>
+                <p className="text-3xl font-bold text-orange-600">{links.length}</p>
               </div>
               <div className="text-4xl">🔗</div>
             </div>
+          </div>
+        </div>
+
+        {/* Informações sobre Pontuação */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6 mb-8">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">💡 Sistema de Pontuação</h3>
+          <div className="text-sm text-gray-700 space-y-1">
+            <p>• <strong>Indicação Direta:</strong> 10 pontos por cada pessoa que você indicar</p>
+            <p>• <strong>Indicação Indireta:</strong> 50% dos pontos das indicações feitas por quem você indicou</p>
+            <p>• <strong>Exemplo:</strong> Se você indicar A (10pts) e A indicar B (10pts), você ganha 10 + 5 = 15 pontos totais</p>
           </div>
         </div>
 

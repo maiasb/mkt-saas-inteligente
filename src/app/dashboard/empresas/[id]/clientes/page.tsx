@@ -199,62 +199,105 @@ export default function ClientesPage() {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nome
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Telefone
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {clientes.map((cliente) => (
-                  <tr key={cliente.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <Link 
-                        href={`/dashboard/empresas/${empresaId}/clientes/${cliente.id}`}
-                        className="text-purple-600 hover:text-purple-900 hover:underline"
-                      >
-                        {cliente.nome}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {cliente.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {cliente.telefone || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openLinkModal(cliente)}
-                          className="text-purple-600 hover:text-purple-900"
-                        >
-                          Links
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCliente(cliente.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nome
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Telefone
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ações
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {clientes.map((cliente) => (
+                    <tr key={cliente.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <Link 
+                          href={`/dashboard/empresas/${empresaId}/clientes/${cliente.id}`}
+                          className="text-purple-600 hover:text-purple-900 hover:underline"
+                        >
+                          {cliente.nome}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {cliente.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {cliente.telefone || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openLinkModal(cliente)}
+                            className="text-purple-600 hover:text-purple-900"
+                          >
+                            Links
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCliente(cliente.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-4">
+              {clientes.map((cliente) => (
+                <div key={cliente.id} className="bg-white rounded-lg shadow p-4">
+                  <div className="mb-3">
+                    <Link 
+                      href={`/dashboard/empresas/${empresaId}/clientes/${cliente.id}`}
+                      className="text-lg font-medium text-purple-600 hover:text-purple-900"
+                    >
+                      {cliente.nome}
+                    </Link>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start">
+                      <span className="text-gray-500 w-20">Email:</span>
+                      <span className="text-gray-900 flex-1 break-all">{cliente.email}</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-gray-500 w-20">Telefone:</span>
+                      <span className="text-gray-900">{cliente.telefone || '-'}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={() => openLinkModal(cliente)}
+                      className="flex-1 bg-purple-100 text-purple-700 py-2 px-4 rounded-lg hover:bg-purple-200 transition text-sm font-medium"
+                    >
+                      Links
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCliente(cliente.id)}
+                      className="flex-1 bg-red-100 text-red-700 py-2 px-4 rounded-lg hover:bg-red-200 transition text-sm font-medium"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </main>
 
