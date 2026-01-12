@@ -1,0 +1,32 @@
+// Service para Limber Card API (Plataforma de Vendas)
+
+import { LimberCardRepository } from './limber.repository';
+
+export class LimberCardService {
+  private repository: LimberCardRepository;
+
+  constructor() {
+    this.repository = new LimberCardRepository();
+  }
+
+  /**
+   * Autentica e retorna os dados completos da autenticação
+   */
+  async autenticar() {
+    return await this.repository.authenticate();
+  }
+
+  /**
+   * Obtém um token válido para uso em outras requisições
+   */
+  async obterToken() {
+    return await this.repository.getToken();
+  }
+
+  /**
+   * Limpa o cache do token (útil quando recebe erro 401)
+   */
+  limparCacheToken() {
+    this.repository.clearTokenCache();
+  }
+}

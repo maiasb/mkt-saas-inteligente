@@ -12,6 +12,12 @@ interface Cliente {
   telefone?: string;
 }
 
+interface EmpresaStats {
+  totalClientes: number;
+  totalPontos: number;
+  totalLinks: number;
+}
+
 export default function ClientesEmpresaPage() {
   const params = useParams();
   const empresaSlug = params.slug as string;
@@ -24,9 +30,28 @@ export default function ClientesEmpresaPage() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalItens, setTotalItens] = useState(0);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [isLoadingLinks, setIsLoadingLinks] = useState(false);
+  const [empresaStats, setEmpresaStats] = useState<EmpresaStats>({
+    totalClientes: 0,
+    totalPontos: 0,
+    totalLinks: 0,
+  });
 
   const empresa = getEmpresaBySlug(empresaSlug);
-
+  const fetchEmpresaStats = useCallback(async () => {
+    if (!empresa) return;
+    
+    try {
+      const response = await fetch(`/api/empresas/${empresa.id}/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setEmpresaStats(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas da empresa:', error);
+    }
+  }, [empresa]);
   const fetchClientes = useCallback(async (page: number) => {
     if (!empresa) return;
     
@@ -46,25 +71,35 @@ export default function ClientesEmpresaPage() {
 
   useEffect(() => {
     fetchClientes(paginaAtual);
-  }, [paginaAtual]);
+    fetchEmpresaStats();
+  }, [paginaAtual, fetchEmpresaStats]);
 
   const openLinkModal = async (cliente: Cliente) => {
+    setIsLoadingLinks(true);
     try {
       const response = await fetch(`/api/${empresaSlug}/clientes/${cliente.id}`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao buscar links');
+      }
+      
       const data = await response.json();
       
       setSelectedCliente(cliente);
-      setClienteLinks(data.links || []);
+      setClienteLinks(Array.isArray(data.links) ? data.links : []);
       setShowLinkModal(true);
     } catch (error) {
       console.error('Erro ao carregar links:', error);
-      alert('Erro ao carregar links');
+      alert('Erro ao carregar links. Tente novamente.');
+    } finally {
+      setIsLoadingLinks(false);
     }
   };
 
   const handleGerarLink = async () => {
-    if (!selectedCliente || !empresa) return;
+    if (!selectedCliente || !empresa || isGeneratingLink) return;
 
+    setIsGeneratingLink(true);
     try {
       const response = await fetch('/api/links', {
         method: 'POST',
@@ -78,19 +113,24 @@ export default function ClientesEmpresaPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Erro ao gerar link');
+        alert(error?.error || 'Erro ao gerar link');
         return;
       }
 
       // Recarrega os links do cliente
       const linksResponse = await fetch(`/api/${empresaSlug}/clientes/${selectedCliente.id}`);
-      const data = await linksResponse.json();
-      setClienteLinks(data.links || []);
+      
+      if (linksResponse.ok) {
+        const data = await linksResponse.json();
+        setClienteLinks(Array.isArray(data.links) ? data.links : []);
+      }
       
       alert('Link gerado com sucesso!');
     } catch (error) {
       console.error('Erro ao gerar link:', error);
-      alert('Erro ao gerar link');
+      alert('Erro ao gerar link. Tente novamente.');
+    } finally {
+      setIsGeneratingLink(false);
     }
   };
 
@@ -106,8 +146,62 @@ export default function ClientesEmpresaPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="text-center">Carregando clientes...</div>
+      <div className="p-4 sm:p-6 lg:p-8">
+        {/* Header Skeleton */}
+        <div className="mb-8 xl:ml-0 ml-14">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-8 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-8 bg-gray-200 rounded animate-pulse"></div>
+            <div>
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Skeleton - Desktop */}
+        <div className="hidden xl:block bg-white rounded-lg shadow overflow-hidden">
+          <div className="animate-pulse">
+            {/* Header */}
+            <div className="bg-gray-50 px-6 py-3 flex gap-4">
+              <div className="h-4 bg-gray-200 rounded flex-1"></div>
+              <div className="h-4 bg-gray-200 rounded flex-1"></div>
+              <div className="h-4 bg-gray-200 rounded flex-1"></div>
+              <div className="h-4 bg-gray-200 rounded w-32"></div>
+              <div className="h-4 bg-gray-200 rounded w-32"></div>
+            </div>
+            {/* Rows */}
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="px-6 py-4 border-t border-gray-200 flex gap-4">
+                <div className="h-4 bg-gray-200 rounded flex-1"></div>
+                <div className="h-4 bg-gray-200 rounded flex-1"></div>
+                <div className="h-4 bg-gray-200 rounded flex-1"></div>
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cards Skeleton - Mobile */}
+        <div className="xl:hidden space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white rounded-lg shadow p-4 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-gray-200 flex gap-2">
+                <div className="h-10 bg-gray-200 rounded flex-1"></div>
+                <div className="h-10 bg-gray-200 rounded flex-1"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -115,31 +209,89 @@ export default function ClientesEmpresaPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8 xl:ml-0 ml-14">
+      <div className="mb-6 xl:ml-0 ml-14">
         <div className="flex items-center gap-4 mb-2">
           <Link href="/dashboard/empresas" className="text-gray-600 hover:text-gray-900">
             ← Voltar
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-2 h-8 rounded"
-            style={{ backgroundColor: empresa.cor }}
-          />
-          <div>
-            <p className="text-lg font-semibold" style={{ color: empresa.cor }}>
-              {empresa.nome}
-            </p>
-            <p className="text-sm text-gray-600">
-              Clientes gerenciados manualmente
-            </p>
+      </div>
+
+      {/* Painel de Informações da Empresa */}
+      <div className="mb-6 bg-white rounded-lg shadow-lg overflow-hidden">
+        <div 
+          className="p-6 text-white"
+          style={{ background: `linear-gradient(135deg, ${empresa.cor} 0%, ${empresa.cor}dd 100%)` }}
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">{empresa.nome}</h2>
+              <div className="space-y-1 text-sm opacity-90">
+                <p>📧 {empresa.email}</p>
+                {empresa.telefone && <p>📱 {empresa.telefone}</p>}
+                {empresa.cnpj && <p>🏢 {empresa.cnpj}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cards de Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50">
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4" style={{ borderColor: empresa.cor }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total de Clientes</p>
+                <p className="text-2xl font-bold" style={{ color: empresa.cor }}>
+                  {empresaStats.totalClientes}
+                </p>
+              </div>
+              <div className="text-3xl opacity-50">👥</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4" style={{ borderColor: empresa.cor }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Pontuação Total</p>
+                <p className="text-2xl font-bold" style={{ color: empresa.cor }}>
+                  {empresaStats.totalPontos}
+                </p>
+              </div>
+              <div className="text-3xl opacity-50">⭐</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4" style={{ borderColor: empresa.cor }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Links Gerados</p>
+                <p className="text-2xl font-bold" style={{ color: empresa.cor }}>
+                  {empresaStats.totalLinks}
+                </p>
+              </div>
+              <div className="text-3xl opacity-50">🔗</div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div>
+        <div className="flex items-center gap-3 mb-6">
+          <div 
+            className="w-2 h-8 rounded"
+            style={{ backgroundColor: empresa.cor }}
+          />
+          <div>
+            <p className="text-lg font-semibold" style={{ color: empresa.cor }}>
+              Listagem de Clientes
+            </p>
+            <p className="text-sm text-gray-600">
+              {totalItens} cliente{totalItens !== 1 ? 's' : ''} cadastrado{totalItens !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
         {clientes.length === 0 ? (
           <div className="bg-white p-12 rounded-lg shadow text-center">
             <p className="text-gray-600 text-lg">Nenhum cliente cadastrado ainda.</p>
@@ -326,16 +478,23 @@ export default function ClientesEmpresaPage() {
       {showLinkModal && selectedCliente && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            {isLoadingLinks ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Carregando links...</p>
+              </div>
+            ) : (
+              <>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-800">
                 Links de {selectedCliente.nome}
               </h2>
               <button
                 onClick={handleGerarLink}
-                className="px-4 py-2 rounded-lg transition text-white font-medium"
+                disabled={isGeneratingLink}
+                className="px-4 py-2 rounded-lg transition text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: empresa.cor }}
               >
-                + Gerar Link
+                {isGeneratingLink ? 'Gerando...' : '+ Gerar Link'}
               </button>
             </div>
             
@@ -369,10 +528,11 @@ export default function ClientesEmpresaPage() {
                 <p className="text-gray-600 mb-4">Nenhum link gerado ainda.</p>
                 <button
                   onClick={handleGerarLink}
-                  className="px-6 py-3 rounded-lg transition text-white font-medium"
+                  disabled={isGeneratingLink}
+                  className="px-6 py-3 rounded-lg transition text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: empresa.cor }}
                 >
-                  Gerar Primeiro Link
+                  {isGeneratingLink ? 'Gerando...' : 'Gerar Primeiro Link'}
                 </button>
               </div>
             )}
@@ -386,6 +546,8 @@ export default function ClientesEmpresaPage() {
             >
               Fechar
             </button>
+            </>
+            )}
           </div>
         </div>
       )}

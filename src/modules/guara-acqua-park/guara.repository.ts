@@ -185,24 +185,34 @@ export class GuaraRepository {
 
   /**
    * Lista indicações de um cliente (usuários indicados por ele)
+   * Busca na tabela pontuacoes onde o cliente é indicador
    */
   async listarIndicacoesPorCliente(clienteId: string): Promise<GuaraIndicacao[]> {
     try {
       const [rows] = await db.query(
-        `SELECT 
-           id,
-           indicador_cliente_id,
-           nome,
-           email,
-           telefone,
-           id as convertido_cliente_id,
-           created_at
-         FROM clientes
-         WHERE indicador_cliente_id = ?
-         ORDER BY created_at DESC`,
+        `SELECT DISTINCT
+           p.id,
+           p.cliente_id as indicador_cliente_id,
+           p.referencia_cliente_id as convertido_cliente_id,
+           p.created_at
+         FROM pontuacoes p
+         WHERE p.cliente_id = ?
+           AND p.tipo = 'INDICADOR'
+           AND p.referencia_cliente_id IS NOT NULL
+         ORDER BY p.created_at DESC`,
         [clienteId]
       );
-      return rows as GuaraIndicacao[];
+      
+      // Mapeia para interface GuaraIndicacao (nome e email virão da API externa quando necessário)
+      return (rows as any[]).map(row => ({
+        id: row.id,
+        indicador_cliente_id: row.indicador_cliente_id,
+        nome: '', // Dados virão da API externa
+        email: '',
+        telefone: undefined,
+        convertido_cliente_id: row.convertido_cliente_id,
+        created_at: row.created_at,
+      }));
     } catch (error) {
       console.error('[GuaraRepository] Erro ao listar indicações:', error);
       // Retorna array vazio se não houver dados
@@ -237,17 +247,19 @@ export class GuaraRepository {
   }
 
   /**
-   * Busca estatísticas do cliente
+   * Busca estatísticas do cliente baseado na tabela pontuacoes
    */
   async buscarEstatisticas(clienteId: string) {
     try {
       const [rows] = await db.query(
         `SELECT 
-          COUNT(*) as total_indicacoes,
-          COUNT(*) as total_convertidos,
+          COUNT(DISTINCT p.referencia_cliente_id) as total_indicacoes,
+          COUNT(DISTINCT p.referencia_cliente_id) as total_convertidos,
           0 as total_pendentes
-         FROM clientes
-         WHERE indicador_cliente_id = ?`,
+         FROM pontuacoes p
+         WHERE p.cliente_id = ?
+           AND p.tipo = 'INDICADOR'
+           AND p.referencia_cliente_id IS NOT NULL`,
         [clienteId]
       );
       

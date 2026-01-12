@@ -20,6 +20,7 @@ interface Empresa {
 
 export default function EmpresasPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchEmpresas();
@@ -27,11 +28,14 @@ export default function EmpresasPage() {
 
   const fetchEmpresas = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/empresas/lista');
       const data = await response.json();
       setEmpresas(data);
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,7 +53,29 @@ export default function EmpresasPage() {
 
       {/* Main Content */}
       <div>
-        {empresas.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white p-6 rounded-lg shadow animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
+                  {[...Array(3)].map((_, j) => (
+                    <div key={j} className="text-center">
+                      <div className="h-3 bg-gray-200 rounded w-16 mx-auto mb-2"></div>
+                      <div className="h-6 bg-gray-200 rounded w-12 mx-auto"></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-2 mb-4">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+            ))}
+          </div>
+        ) : empresas.length === 0 ? (
           <div className="bg-white p-12 rounded-lg shadow text-center">
             <p className="text-gray-600 text-lg">Nenhuma empresa configurada ainda.</p>
             <p className="text-sm text-gray-500 mt-2">
