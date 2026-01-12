@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * @deprecated Use /api/clientes/cadastro em vez desta rota
+ * Esta rota está mantida para compatibilidade mas redireciona para o novo endpoint
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -15,74 +19,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar se o link existe e está ativo
-    const [links] = await db.query(
-      'SELECT * FROM links WHERE id = ? AND ativo = 1',
+    // Buscar código do link pelo ID
+    const [linkResult] = await db.query(
+      'SELECT codigo, empresa_id FROM links WHERE id = ? AND ativo = 1',
       [linkId]
     );
 
-    if (!Array.isArray(links) || links.length === 0) {
+    if (!Array.isArray(linkResult) || linkResult.length === 0) {
       return NextResponse.json(
         { error: 'Link inválido ou inativo' },
         { status: 404 }
       );
     }
 
-    const link: any = links[0];
+    const link: any = linkResult[0];
 
-    // Verificar se já existe cliente com este email na empresa
-    const [clienteExistente] = await db.query(
-      'SELECT id FROM clientes WHERE email = ? AND empresa_id = ?',
-      [email, link.empresa_id]
-    );
+    // Redirecionar para o novo endpoint /api/clientes/cadastro
+    const cadastroBody = {
+      nome,
+      email,
+      telefone,
+      cpf,
+      link_codigo: link.codigo,
+      empresa_id: link.empresa_id
+    };
 
-    if (Array.isArray(clienteExistente) && clienteExistente.length > 0) {
-      return NextResponse.json(
-        { error: 'Já existe um cadastro com este email' },
-        { status: 400 }
-      );
+    // Chamar o novo endpoint internamente
+    const baseUrl = request.nextUrl.origin;
+    const response = await fetch(`${baseUrl}/api/clientes/cadastro`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(cadastroBody),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status });
     }
 
-    // Buscar informações do cliente indicador para determinar o nível
-    let nivelIndicacao = 1;
-    let indicadorClienteId = link.cliente_id || null;
-
-    if (link.cliente_id) {
-      // Verificar o nível do cliente indicador
-      const [clienteIndicador] = await db.query(
-        'SELECT nivel_indicacao FROM clientes WHERE id = ?',
-        [link.cliente_id]
-      );
-
-      if (Array.isArray(clienteIndicador) && clienteIndicador.length > 0) {
-        const clienteData: any = clienteIndicador[0];
-        nivelIndicacao = (clienteData.nivel_indicacao || 1) + 1;
-      }
-    }
-
-    // Criar cliente
-    const novoClienteId = randomUUID();
-    await db.query(
-      `INSERT INTO clientes (id, nome, email, telefone, cpf, empresa_id, indicador_cliente_id, link_id, nivel_indicacao) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [novoClienteId, nome, email, telefone || null, cpf || null, link.empresa_id, indicadorClienteId, linkId, nivelIndicacao]
-    );
-
-    // Buscar empresa
-    const [empresas] = await db.query(
-      'SELECT nome FROM empresas WHERE id = ?',
-      [link.empresa_id]
-    );
-    const empresa: any = Array.isArray(empresas) ? empresas[0] : null;
-
+    // Retornar resposta compatível com formato antigo
     return NextResponse.json({
       success: true,
       cliente: {
-        id: novoClienteId,
+        id: data.data.cliente_id,
         nome,
-        empresa: empresa?.nome || '',
+        empresa: link.empresa_id,
       },
+      // Incluir dados completos da nova resposta
+      _novoCadastro: data.data
     });
+
   } catch (error) {
     console.error('Erro ao criar cliente:', error);
     return NextResponse.json(

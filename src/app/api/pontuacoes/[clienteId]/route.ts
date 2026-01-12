@@ -26,9 +26,7 @@ export async function GET(
         id,
         empresa_id,
         pontos,
-        tipo,
         link_id,
-        referencia_cliente_id,
         created_at
       FROM pontuacoes
       WHERE cliente_id = ?
@@ -37,14 +35,13 @@ export async function GET(
 
     // Busca clientes indicados por este cliente
     const [indicados] = await db.query(`
-      SELECT DISTINCT
-        p.referencia_cliente_id as cliente_id,
-        p.created_at
-      FROM pontuacoes p
-      WHERE p.cliente_id = ? 
-        AND p.tipo = 'INDICADOR'
-        AND p.referencia_cliente_id IS NOT NULL
-      ORDER BY p.created_at DESC
+      SELECT 
+        indicado_id as cliente_id,
+        link_id,
+        created_at
+      FROM indicacoes
+      WHERE indicador_id = ?
+      ORDER BY created_at DESC
     `, [clienteId]);
 
     return NextResponse.json({

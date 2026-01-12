@@ -185,21 +185,19 @@ export class GuaraRepository {
 
   /**
    * Lista indicações de um cliente (usuários indicados por ele)
-   * Busca na tabela pontuacoes onde o cliente é indicador
+   * Busca na tabela indicacoes onde o cliente é indicador
    */
   async listarIndicacoesPorCliente(clienteId: string): Promise<GuaraIndicacao[]> {
     try {
       const [rows] = await db.query(
-        `SELECT DISTINCT
-           p.id,
-           p.cliente_id as indicador_cliente_id,
-           p.referencia_cliente_id as convertido_cliente_id,
-           p.created_at
-         FROM pontuacoes p
-         WHERE p.cliente_id = ?
-           AND p.tipo = 'INDICADOR'
-           AND p.referencia_cliente_id IS NOT NULL
-         ORDER BY p.created_at DESC`,
+        `SELECT 
+           i.id,
+           i.indicador_id as indicador_cliente_id,
+           i.indicado_id as convertido_cliente_id,
+           i.created_at
+         FROM indicacoes i
+         WHERE i.indicador_id = ?
+         ORDER BY i.created_at DESC`,
         [clienteId]
       );
       
@@ -247,19 +245,17 @@ export class GuaraRepository {
   }
 
   /**
-   * Busca estatísticas do cliente baseado na tabela pontuacoes
+   * Busca estatísticas do cliente baseado na tabela indicacoes
    */
   async buscarEstatisticas(clienteId: string) {
     try {
       const [rows] = await db.query(
         `SELECT 
-          COUNT(DISTINCT p.referencia_cliente_id) as total_indicacoes,
-          COUNT(DISTINCT p.referencia_cliente_id) as total_convertidos,
+          COUNT(DISTINCT i.indicado_id) as total_indicacoes,
+          COUNT(DISTINCT i.indicado_id) as total_convertidos,
           0 as total_pendentes
-         FROM pontuacoes p
-         WHERE p.cliente_id = ?
-           AND p.tipo = 'INDICADOR'
-           AND p.referencia_cliente_id IS NOT NULL`,
+         FROM indicacoes i
+         WHERE i.indicador_id = ?`,
         [clienteId]
       );
       
