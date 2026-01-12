@@ -1,18 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { getEmpresasAtivas } from '@/config/empresas.config';
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [empresasExpanded, setEmpresasExpanded] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: '📊' },
-    { name: 'Empresas', path: '/dashboard/empresas', icon: '🏢' },
-  ];
+  const empresas = getEmpresasAtivas();
+
+  // Auto-expandir empresas se estiver em uma página de empresa
+  useEffect(() => {
+    if (pathname.includes('/dashboard/empresas/')) {
+      setEmpresasExpanded(true);
+    }
+  }, [pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
@@ -24,6 +30,10 @@ export default function Sidebar() {
       return pathname === path;
     }
     return pathname.startsWith(path);
+  };
+
+  const isEmpresaActive = (slug: string) => {
+    return pathname.includes(`/dashboard/empresas/${slug}`);
   };
 
   return (
@@ -84,25 +94,90 @@ export default function Sidebar() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                href={item.path}
-                onClick={() => setIsOpen(false)}
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            {/* Dashboard */}
+            <Link
+              href="/dashboard"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200
+                ${
+                  isActive('/dashboard') && pathname === '/dashboard'
+                    ? 'bg-white/20 shadow-lg transform scale-105'
+                    : 'hover:bg-white/10 hover:translate-x-1'
+                }
+              `}
+            >
+              <span className="text-xl">📊</span>
+              <span className="font-medium text-sm">Dashboard</span>
+            </Link>
+
+            {/* Empresas - Collapsible */}
+            <div>
+              <button
+                onClick={() => setEmpresasExpanded(!empresasExpanded)}
                 className={`
-                  flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+                  w-full flex items-center justify-between gap-3 px-4 py-2 rounded-lg transition-all duration-200
                   ${
-                    isActive(item.path)
-                      ? 'bg-white/20 shadow-lg transform scale-105'
-                      : 'hover:bg-white/10 hover:translate-x-1'
+                    pathname.includes('/dashboard/empresas')
+                      ? 'bg-white/20 shadow-lg'
+                      : 'hover:bg-white/10'
                   }
                 `}
               >
-                <span className="text-2xl">{item.icon}</span>
-                <span className="font-medium">{item.name}</span>
-              </Link>
-            ))}
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🏢</span>
+                  <span className="font-medium text-sm">Empresas</span>
+                </div>
+                <svg
+                  className={`w-5 h-5 transition-transform duration-200 ${
+                    empresasExpanded ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {/* Sub-items de Empresas */}
+              <div
+                className={`
+                  overflow-hidden transition-all duration-300 ease-in-out
+                  ${empresasExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+                `}
+              >
+                <div className="pl-4 pt-2 space-y-1">
+                  {empresas.map((empresa) => (
+                    <Link
+                      key={empresa.id}
+                      href={`/dashboard/empresas/${empresa.slug}/clientes`}
+                      onClick={() => setIsOpen(false)}
+                      className={`
+                        flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm
+                        ${
+                          isEmpresaActive(empresa.slug)
+                            ? 'bg-white/20 shadow-md font-semibold'
+                            : 'hover:bg-white/10 hover:translate-x-1'
+                        }
+                      `}
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: empresa.cor }}
+                      />
+                      <span>{empresa.nome}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
           </nav>
 
           {/* Footer */}
