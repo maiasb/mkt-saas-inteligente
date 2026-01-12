@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { getEmpresaById } from '@/config/empresas.config';
 
 export async function GET(
   request: NextRequest,
@@ -9,9 +10,8 @@ export async function GET(
     const { codigo } = await params;
 
     const [links] = await db.query(`
-      SELECT l.*, e.id as empresa_id, e.nome as empresa_nome
+      SELECT l.*
       FROM links l
-      INNER JOIN empresas e ON e.id = l.empresa_id
       WHERE l.codigo = ? AND l.ativo = 1
     `, [codigo]);
 
@@ -23,12 +23,22 @@ export async function GET(
     }
 
     const link: any = links[0];
+    
+    // Busca empresa da config (hard-coded)
+    const empresa = getEmpresaById(link.empresa_id);
+    
+    if (!empresa) {
+      return NextResponse.json(
+        { error: 'Empresa não encontrada' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       linkId: link.id,
       empresa: {
-        id: link.empresa_id,
-        nome: link.empresa_nome,
+        id: empresa.id,
+        nome: empresa.nome,
       },
     });
   } catch (error) {

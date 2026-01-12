@@ -41,11 +41,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    router.push('/login');
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -55,26 +50,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Dreams - Painel Admin</h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
-          >
-            Sair
-          </button>
-        </div>
-      </header>
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Welcome Section */}
+      <div className="mb-8 xl:ml-0 ml-14">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-2">Bem-vindo ao painel administrativo Dreams</p>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card Empresas */}
           <Link href="/dashboard/empresas">
-            <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div className="bg-white p-6 rounded-lg shadow hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">
@@ -91,7 +79,7 @@ export default function DashboardPage() {
 
           {/* Card Links */}
           <Link href="/dashboard/links">
-            <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div className="bg-white p-6 rounded-lg shadow hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">
@@ -111,25 +99,25 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Estatísticas</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-purple-100 p-4 rounded-lg">
+            <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-4 rounded-lg">
               <p className="text-purple-800 font-semibold">Total de Empresas</p>
               <p className="text-3xl font-bold text-purple-900">{stats.totalEmpresas}</p>
             </div>
-            <div className="bg-pink-100 p-4 rounded-lg">
+            <div className="bg-gradient-to-br from-pink-100 to-pink-200 p-4 rounded-lg">
               <p className="text-pink-800 font-semibold">Clientes Cadastrados</p>
               <p className="text-3xl font-bold text-pink-900">{stats.totalClientes}</p>
             </div>
-            <div className="bg-blue-100 p-4 rounded-lg">
+            <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-4 rounded-lg">
               <p className="text-blue-800 font-semibold">Links Ativos</p>
               <p className="text-3xl font-bold text-blue-900">{stats.totalLinks}</p>
             </div>
-            <div className="bg-green-100 p-4 rounded-lg">
+            <div className="bg-gradient-to-br from-green-100 to-green-200 p-4 rounded-lg">
               <p className="text-green-800 font-semibold">Usuários Indicados</p>
               <p className="text-3xl font-bold text-green-900">{stats.totalUsuariosIndicados}</p>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

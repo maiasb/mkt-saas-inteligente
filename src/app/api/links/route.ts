@@ -33,44 +33,32 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { clienteId } = body;
+    const { clienteId, empresaId, empresaSlug } = body;
 
-    if (!clienteId) {
+    if (!clienteId || !empresaId) {
       return NextResponse.json(
-        { error: 'ID do cliente é obrigatório' },
+        { error: 'ID do cliente e empresa são obrigatórios' },
         { status: 400 }
       );
     }
-
-    // Verificar se cliente existe e pegar empresa_id
-    const [clientes] = await db.query('SELECT * FROM clientes WHERE id = ?', [clienteId]);
-    if (!Array.isArray(clientes) || clientes.length === 0) {
-      return NextResponse.json(
-        { error: 'Cliente não encontrado' },
-        { status: 404 }
-      );
-    }
-
-    const cliente = clientes[0] as any;
-    const empresaId = cliente.empresa_id;
 
     const id = randomBytes(16).toString('hex');
     const codigo = randomBytes(8).toString('hex');
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const url = `${baseUrl}/ref/${codigo}`;
 
+    // Insere link apenas com cliente_id (dados vêm da API externa)
     await db.query(
-      `INSERT INTO links (id, url, codigo, empresa_id, cliente_id, ativo) VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO links 
+       (id, url, codigo, empresa_id, cliente_id, ativo, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [id, url, codigo, empresaId, clienteId, true]
     );
 
-    const [rows] = await db.query(`
-      SELECT l.*, e.nome as empresa_nome, c.nome as cliente_nome
-      FROM links l
-      INNER JOIN empresas e ON e.id = l.empresa_id
-      LEFT JOIN clientes c ON c.id = l.cliente_id
-      WHERE l.id = ?
-    `, [id]);
+    const [rows] = await db.query(
+      `SELECT * FROM links WHERE id = ?`,
+      [id]
+    );
     
     const link = Array.isArray(rows) ? rows[0] : null;
 
