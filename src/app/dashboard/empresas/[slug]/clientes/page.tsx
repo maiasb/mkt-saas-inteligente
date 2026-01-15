@@ -207,9 +207,9 @@ export default function ClientesEmpresaPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
       {/* Header */}
-      <div className="mb-6 xl:ml-0 ml-14">
+      <div className="mb-6">
         <div className="flex items-center gap-4 mb-2">
           <Link href="/dashboard/empresas" className="text-gray-600 hover:text-gray-900">
             ← Voltar

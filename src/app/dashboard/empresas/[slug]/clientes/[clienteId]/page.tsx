@@ -181,9 +181,9 @@ export default function ClienteDetalhesPage() {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
         {/* Header Skeleton */}
-        <div className="mb-8 xl:ml-0 ml-14">
+        <div className="mb-8">
           <div className="flex items-center gap-4 mb-2">
             <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
           </div>
@@ -266,9 +266,9 @@ export default function ClienteDetalhesPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
       {/* Header */}
-      <div className="mb-8 xl:ml-0 ml-14">
+      <div className="mb-8">
         <div className="flex items-center gap-4 mb-2">
           <Link 
             href={`/dashboard/empresas/${empresaSlug}/clientes`} 

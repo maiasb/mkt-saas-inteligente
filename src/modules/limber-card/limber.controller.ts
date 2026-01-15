@@ -56,6 +56,37 @@ export class LimberCardController {
       );
     }
   }
+
+  /**
+   * GET /api/limber-card/vendas
+   * Lista vendas da plataforma Limber Card
+   */
+  async listarVendas(request: NextRequest) {
+    try {
+      const { searchParams } = new URL(request.url);
+      
+      const params = {
+        estabelecOrig: searchParams.get('estabelecOrig') 
+          ? parseInt(searchParams.get('estabelecOrig')!) 
+          : undefined,
+        limit: searchParams.get('limit') 
+          ? parseInt(searchParams.get('limit')!) 
+          : undefined,
+        dataInicio: searchParams.get('dataInicio') || undefined,
+        dataFim: searchParams.get('dataFim') || undefined,
+      };
+
+      const vendas = await this.service.listarVendas(params);
+      
+      return NextResponse.json(vendas);
+    } catch (error) {
+      console.error('Erro ao listar vendas do Limber Card:', error);
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Erro ao listar vendas' },
+        { status: 500 }
+      );
+    }
+  }
 }
 
 export const limberCardController = new LimberCardController();

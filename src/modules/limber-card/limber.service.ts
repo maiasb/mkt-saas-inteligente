@@ -29,4 +29,16 @@ export class LimberCardService {
   limparCacheToken() {
     this.repository.clearTokenCache();
   }
+
+  /**
+   * Lista vendas da plataforma
+   */
+  async listarVendas(params?: {
+    estabelecOrig?: number;
+    limit?: number;
+    dataInicio?: string;
+    dataFim?: string;
+  }) {
+    return await this.repository.listarVendas(params);
+  }
 }
