@@ -228,8 +228,8 @@ export default function Sidebar() {
                             }
                           `}
                         >
-                          <span>👥</span>
-                          <span>Clientes</span>
+                          <span>🎯</span>
+                          <span>Indicações</span>
                         </Link>
 
                         <Link
