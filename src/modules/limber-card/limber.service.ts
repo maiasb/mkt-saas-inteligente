@@ -36,9 +36,16 @@ export class LimberCardService {
   async listarVendas(params?: {
     estabelecOrig?: number;
     limit?: number;
-    dataInicio?: string;
-    dataFim?: string;
+    dataVendaInit?: string;
+    dataVendaFim?: string;
   }) {
     return await this.repository.listarVendas(params);
+  }
+
+  /**
+   * Obtém detalhes completos de uma venda
+   */
+  async obterDetalhesVenda(codigoVenda: number) {
+    return await this.repository.obterDetalhesVenda(codigoVenda);
   }
 }

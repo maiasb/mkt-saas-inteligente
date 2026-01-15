@@ -72,8 +72,8 @@ export class LimberCardController {
         limit: searchParams.get('limit') 
           ? parseInt(searchParams.get('limit')!) 
           : undefined,
-        dataInicio: searchParams.get('dataInicio') || undefined,
-        dataFim: searchParams.get('dataFim') || undefined,
+        dataVendaInit: searchParams.get('dataVendaInit') || undefined,
+        dataVendaFim: searchParams.get('dataVendaFim') || undefined,
       };
 
       const vendas = await this.service.listarVendas(params);
@@ -83,6 +83,23 @@ export class LimberCardController {
       console.error('Erro ao listar vendas do Limber Card:', error);
       return NextResponse.json(
         { error: error instanceof Error ? error.message : 'Erro ao listar vendas' },
+        { status: 500 }
+      );
+    }
+  }
+
+  /**
+   * GET /api/limber-card/vendas/[codigo]
+   * Obtém detalhes completos de uma venda
+   */
+  async obterDetalhesVenda(codigoVenda: number) {
+    try {
+      const detalhes = await this.service.obterDetalhesVenda(codigoVenda);
+      return NextResponse.json(detalhes);
+    } catch (error) {
+      console.error('Erro ao obter detalhes da venda:', error);
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Erro ao obter detalhes da venda' },
         { status: 500 }
       );
     }

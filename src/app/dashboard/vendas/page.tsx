@@ -27,9 +27,13 @@ export default function VendasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [estabelecimento, setEstabelecimento] = useState('2360'); // Guará Acqua Park
-  const [limit, setLimit] = useState('50');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 20;
+  const [modalAberto, setModalAberto] = useState(false);
+  const [vendaSelecionada, setVendaSelecionada] = useState<any>(null);
+  const [loadingDetalhes, setLoadingDetalhes] = useState(false);
 
   const carregarVendas = useCallback(async () => {
     try {
@@ -38,7 +42,9 @@ export default function VendasPage() {
 
       const params = new URLSearchParams();
       if (estabelecimento) params.append('estabelecOrig', estabelecimento);
-      if (limit) params.append('limit', limit);
+      // Removido limit para obter todos os registros
+      if (dataInicio) params.append('dataVendaInit', dataInicio);
+      if (dataFim) params.append('dataVendaFim', dataFim);
 
       const response = await fetch(`/api/limber-card/vendas?${params.toString()}`);
       
@@ -47,18 +53,32 @@ export default function VendasPage() {
       }
 
       const data = await response.json();
-      setVendas(data);
+      
+      // Ordenar por data (mais recentes primeiro)
+      const vendasOrdenadas = data.sort((a: Venda, b: Venda) => {
+        const [diaA, mesA, anoA] = a.data.split('/');
+        const [horaA, minA, segA] = a.hora.split(':');
+        const dataHoraA = new Date(parseInt(anoA), parseInt(mesA) - 1, parseInt(diaA), parseInt(horaA), parseInt(minA), parseInt(segA));
+        
+        const [diaB, mesB, anoB] = b.data.split('/');
+        const [horaB, minB, segB] = b.hora.split(':');
+        const dataHoraB = new Date(parseInt(anoB), parseInt(mesB) - 1, parseInt(diaB), parseInt(horaB), parseInt(minB), parseInt(segB));
+        
+        return dataHoraB.getTime() - dataHoraA.getTime(); // Decrescente
+      });
+      
+      setVendas(vendasOrdenadas);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar vendas');
     } finally {
       setLoading(false);
     }
-  }, [estabelecimento, limit]);
+  }, [estabelecimento, dataInicio, dataFim]);
 
   useEffect(() => {
+    // Carrega vendas apenas na primeira montagem do componente
     carregarVendas();
-    setPaginaAtual(1); // Reset pagination on filter change
-  }, [carregarVendas]);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -89,6 +109,55 @@ export default function VendasPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Gerar números de páginas para paginação inteligente
+  const gerarPaginas = () => {
+    const paginas: (number | string)[] = [];
+    const delta = 2; // Quantas páginas mostrar ao redor da atual
+    
+    for (let i = 1; i <= totalPaginas; i++) {
+      if (
+        i === 1 || // Primeira página
+        i === totalPaginas || // Última página
+        (i >= paginaAtual - delta && i <= paginaAtual + delta) // Páginas ao redor da atual
+      ) {
+        paginas.push(i);
+      } else if (
+        paginas[paginas.length - 1] !== '...' // Evita adicionar múltiplos "..."
+      ) {
+        paginas.push('...');
+      }
+    }
+    
+    return paginas;
+  };
+
+  const abrirDetalhes = async (codigoVenda: number) => {
+    try {
+      setLoadingDetalhes(true);
+      setModalAberto(true);
+      
+      const response = await fetch(`/api/limber-card/vendas/${codigoVenda}`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao carregar detalhes da venda');
+      }
+
+      const detalhes = await response.json();
+      setVendaSelecionada(detalhes);
+    } catch (err) {
+      console.error('Erro ao carregar detalhes:', err);
+      alert('Erro ao carregar detalhes da venda');
+      setModalAberto(false);
+    } finally {
+      setLoadingDetalhes(false);
+    }
+  };
+
+  const fecharModal = () => {
+    setModalAberto(false);
+    setVendaSelecionada(null);
+  };
+
   return (
     <div className="space-y-4 lg:space-y-6 p-4 lg:p-0 pt-20 xl:pt-4">
       {/* Header */}
@@ -100,36 +169,49 @@ export default function VendasPage() {
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-md p-4 sm:p-5 lg:p-6">
         <h2 className="text-base lg:text-lg font-semibold mb-3 lg:mb-4">Filtros</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <div className="sm:col-span-1">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
               Estabelecimento
             </label>
-            <input
-              type="text"
+            <select
               value={estabelecimento}
               onChange={(e) => setEstabelecimento(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Código"
+            >
+              <option value="">Todos</option>
+              <option value="2360">2360 - Ecommerce Guará Acqua Park</option>
+              <option value="2361">2361 - Guará Acqua Park</option>
+            </select>
+          </div>
+          <div className="sm:col-span-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+              Data Início
+            </label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
           <div className="sm:col-span-1">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-              Limite
+              Data Fim
             </label>
-            <select
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-            </select>
+            />
           </div>
           <div className="flex items-end sm:col-span-2 lg:col-span-1">
             <button
-              onClick={carregarVendas}
+              onClick={() => {
+                carregarVendas();
+                setPaginaAtual(1); // Reset para primeira página ao atualizar
+              }}
               disabled={loading}
               className="w-full px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
             >
@@ -182,9 +264,7 @@ export default function VendasPage() {
                 <p className="text-xs sm:text-sm text-gray-600 truncate">Valor Total</p>
                 <p className="text-base sm:text-lg lg:text-2xl font-bold text-purple-600 truncate">
                   {formatarMoeda(
-                    vendas
-                      .filter(v => v.status === 'A')
-                      .reduce((acc, v) => acc + v.total_liquido, 0)
+                    vendas.reduce((acc, v) => acc + v.total_liquido, 0)
                   )}
                 </p>
               </div>
@@ -239,6 +319,9 @@ export default function VendasPage() {
                     <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       Status
                     </th>
+                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -255,8 +338,8 @@ export default function VendasPage() {
                         <div className="text-xs text-gray-500">{venda.hora}</div>
                       </td>
                       <td className="px-3 lg:px-4 py-3 max-w-[200px]">
-                        <div className="text-sm text-gray-900 truncate">{venda.nome_titular}</div>
-                        <div className="text-xs text-gray-500 truncate">{venda.email_titular}</div>
+                        <div className="text-sm text-gray-900 truncate">{venda.nome_titular || '-'}</div>
+                        <div className="text-xs text-gray-500 truncate">{venda.email_titular || '-'}</div>
                       </td>
                       <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
                         {venda.quantidade}
@@ -279,6 +362,14 @@ export default function VendasPage() {
                         >
                           {venda.status_desc}
                         </span>
+                      </td>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                        <button
+                          onClick={() => abrirDetalhes(venda.codigo)}
+                          className="text-purple-600 hover:text-purple-800 text-sm font-medium"
+                        >
+                          Ver Detalhes
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -308,7 +399,7 @@ export default function VendasPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Cliente:</span>
-                    <span className="font-medium text-gray-900 truncate ml-2">{venda.nome_titular}</span>
+                    <span className="font-medium text-gray-900 truncate ml-2">{venda.nome_titular || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Data:</span>
@@ -327,6 +418,13 @@ export default function VendasPage() {
                     <span className="text-gray-900">{venda.formas_pag_desc || '-'}</span>
                   </div>
                 </div>
+                
+                <button
+                  onClick={() => abrirDetalhes(venda.codigo)}
+                  className="mt-3 w-full bg-purple-500 text-white py-2 px-4 rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
+                >
+                  Ver Detalhes
+                </button>
               </div>
             ))}
           </div>
@@ -348,19 +446,28 @@ export default function VendasPage() {
                     ← Anterior
                   </button>
                   
-                  {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((pagina) => (
-                    <button
-                      key={pagina}
-                      onClick={() => irParaPagina(pagina)}
-                      className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg ${
-                        paginaAtual === pagina
-                          ? 'bg-purple-500 text-white font-semibold'
-                          : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {pagina}
-                    </button>
-                  ))}
+                  {gerarPaginas().map((pagina, index) => {
+                    if (pagina === '...') {
+                      return (
+                        <span key={`ellipsis-${index}`} className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={pagina}
+                        onClick={() => irParaPagina(pagina as number)}
+                        className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg ${
+                          paginaAtual === pagina
+                            ? 'bg-purple-500 text-white font-semibold'
+                            : 'border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pagina}
+                      </button>
+                    );
+                  })}
                   
                   <button
                     onClick={() => irParaPagina(paginaAtual + 1)}
@@ -381,6 +488,236 @@ export default function VendasPage() {
         <div className="bg-white rounded-xl shadow-md p-12 text-center">
           <div className="text-6xl mb-4">📭</div>
           <p className="text-gray-600 text-lg">Nenhuma venda encontrada</p>
+        </div>
+      )}
+
+      {/* Modal de Detalhes */}
+      {modalAberto && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header do Modal */}
+            <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-pink-500 p-4 sm:p-6 flex justify-between items-center">
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Detalhes da Venda</h2>
+              <button
+                onClick={fecharModal}
+                className="text-white hover:text-gray-200 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="p-4 sm:p-6">
+              {loadingDetalhes ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                  <p className="mt-4 text-gray-600">Carregando detalhes...</p>
+                </div>
+              ) : vendaSelecionada ? (
+                <div className="space-y-6">
+                  {/* Informações Principais */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Localizador</p>
+                      <p className="text-lg font-bold text-gray-900">{vendaSelecionada.localizador}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Código</p>
+                      <p className="text-lg font-bold text-gray-900">#{vendaSelecionada.codigo}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Data/Hora</p>
+                      <p className="text-lg font-semibold text-gray-900">{vendaSelecionada.data_hora}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Status</p>
+                      <span className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full border ${getStatusColor(vendaSelecionada.status)}`}>
+                        {vendaSelecionada.status_desc}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Cliente */}
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">👤 Cliente</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Nome</p>
+                        <p className="text-base font-medium text-gray-900">{vendaSelecionada.nome_titular || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Email</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.email_titular || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Documento</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.doc_titular || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Telefone</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.fone_titular || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Data de Nascimento</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.nascimento_titular || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">IP do Comprador</p>
+                        <p className="text-base text-gray-900 font-mono text-xs">{vendaSelecionada.ip_comprador || '-'}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Endereço */}
+                    <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-2 font-semibold">Endereço</p>
+                      <p className="text-sm text-gray-900">
+                        {vendaSelecionada.endereco_f || '-'}
+                        {vendaSelecionada.numero_f && `, ${vendaSelecionada.numero_f}`}
+                        {vendaSelecionada.bairro_f && ` - ${vendaSelecionada.bairro_f}`}
+                        {(vendaSelecionada.endereco_f || vendaSelecionada.numero_f || vendaSelecionada.bairro_f) && <br />}
+                        {vendaSelecionada.municipio_f || '-'}
+                        {vendaSelecionada.estado_f && ` - ${vendaSelecionada.estado_f}`}
+                        {vendaSelecionada.codigo_postal_f && ` | CEP: ${vendaSelecionada.codigo_postal_f}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Venda */}
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">🎫 Informações da Venda</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <p className="text-xs text-purple-600 mb-1">Quantidade</p>
+                        <p className="text-2xl font-bold text-purple-700">{vendaSelecionada.quantidade}</p>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <p className="text-xs text-green-600 mb-1">Valor Total</p>
+                        <p className="text-2xl font-bold text-green-700">{formatarMoeda(vendaSelecionada.total_liquido)}</p>
+                      </div>
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-xs text-blue-600 mb-1">Pagamento</p>
+                        <p className="text-base font-semibold text-blue-700">{vendaSelecionada.formas_pag_desc || 'Pix'}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Origem</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.origem_venda || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Vendedor</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.usuario_venda || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Data de Inclusão</p>
+                        <p className="text-base text-gray-900">
+                          {vendaSelecionada.data_hora_inc ? new Date(vendaSelecionada.data_hora_inc).toLocaleString('pt-BR') : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Cupom</p>
+                        <p className="text-base font-semibold text-green-700">{vendaSelecionada.cupom_desc || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pagamento PIX */}
+                  {vendaSelecionada.payment_id_pix && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">💳 Pagamento PIX</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">ID do Pagamento</p>
+                          <p className="text-sm font-mono text-gray-900 break-all">{vendaSelecionada.payment_id_pix || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Status</p>
+                          <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-green-100 text-green-800 border border-green-300">
+                            {vendaSelecionada.status_pix || 'CONCLUÍDA'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <p className="text-xs text-gray-500 mb-1">QR Code PIX</p>
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs font-mono text-gray-700 break-all">{vendaSelecionada.qrcode_pix || '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Estabelecimento */}
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">🏢 Estabelecimento</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Local de Venda</p>
+                        <p className="text-base font-medium text-gray-900">{vendaSelecionada.nome_local_venda || vendaSelecionada.local_venda || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Código</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.local_venda || vendaSelecionada.cod_local_venda || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Ponto de Venda</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.ponto_venda || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">CNPJ</p>
+                        <p className="text-base text-gray-900">{vendaSelecionada.cnpj_estabelec || '-'}</p>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <p className="text-xs text-gray-500 mb-1">URL da Origem</p>
+                        {vendaSelecionada.ec_origem_url ? (
+                          <a 
+                            href={vendaSelecionada.ec_origem_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline break-all"
+                          >
+                            {vendaSelecionada.ec_origem_url}
+                          </a>
+                        ) : (
+                          <p className="text-base text-gray-900">-</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informações Adicionais */}
+                  {vendaSelecionada.bilhetes && vendaSelecionada.bilhetes.length > 0 && (
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">🎟️ Bilhetes</h3>
+                      <div className="space-y-2">
+                        {vendaSelecionada.bilhetes.map((bilhete: any, index: number) => (
+                          <div key={index} className="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-gray-900">{bilhete.nome}</p>
+                              <p className="text-sm text-gray-500">Quantidade: {bilhete.quantidade}</p>
+                            </div>
+                            <p className="font-semibold text-gray-900">{formatarMoeda(bilhete.valor)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center text-gray-600 py-12">Erro ao carregar detalhes</p>
+              )}
+            </div>
+
+            {/* Footer do Modal */}
+            <div className="sticky bottom-0 bg-gray-50 p-4 sm:p-6 flex justify-end border-t">
+              <button
+                onClick={fecharModal}
+                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

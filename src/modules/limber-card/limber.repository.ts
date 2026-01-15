@@ -52,8 +52,8 @@ interface Venda {
 interface ListarVendasParams {
   estabelecOrig?: number;
   limit?: number;
-  dataInicio?: string;
-  dataFim?: string;
+  dataVendaInit?: string;
+  dataVendaFim?: string;
 }
 
 export class LimberCardRepository {
@@ -141,12 +141,13 @@ export class LimberCardRepository {
         queryParams.append('limit', params.limit.toString());
       }
       
-      if (params.dataInicio) {
-        queryParams.append('dataInicio', params.dataInicio);
+      // Datas no formato YYYY-MM-DD (formato ISO aceito pela API)
+      if (params.dataVendaInit) {
+        queryParams.append('dataVendaInit', params.dataVendaInit);
       }
       
-      if (params.dataFim) {
-        queryParams.append('dataFim', params.dataFim);
+      if (params.dataVendaFim) {
+        queryParams.append('dataVendaFim', params.dataVendaFim);
       }
 
       const url = `${this.apiUrl}/vendas${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
@@ -172,6 +173,39 @@ export class LimberCardRepository {
       return vendas;
     } catch (error) {
       console.error('[LimberCardRepository] Erro ao listar vendas:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtém detalhes completos de uma venda específica
+   */
+  async obterDetalhesVenda(codigoVenda: number): Promise<any> {
+    try {
+      const token = await this.getToken();
+      
+      const url = `${this.apiUrl}/vendas/venda/${codigoVenda}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'User-Agent': 'Dreams-Indicacoes/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.clearTokenCache();
+          throw new Error('Token expirado. Por favor, tente novamente.');
+        }
+        throw new Error(`Erro ao buscar detalhes da venda: ${response.statusText}`);
+      }
+
+      const detalhes = await response.json();
+      return detalhes;
+    } catch (error) {
+      console.error('[LimberCardRepository] Erro ao obter detalhes da venda:', error);
       throw error;
     }
   }
