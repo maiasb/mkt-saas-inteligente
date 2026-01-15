@@ -6,8 +6,9 @@ import { limberCardController } from '@/modules/limber-card';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { codigo: string } }
+  { params }: { params: Promise<{ codigo: string }> }
 ) {
-  const codigoVenda = parseInt(params.codigo);
+  const { codigo } = await params;
+  const codigoVenda = parseInt(codigo);
   return limberCardController.obterDetalhesVenda(codigoVenda);
 }

@@ -159,12 +159,14 @@ export default function VendasPage() {
   };
 
   return (
-    <div className="space-y-4 lg:space-y-6 p-4 lg:p-0 pt-20 xl:pt-4">
+    <div className="pt-20 xl:pt-0">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-xl p-4 sm:p-6 lg:p-8 text-white">
+      <div className="bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl p-4 sm:p-6 lg:p-8 text-white mb-4 lg:mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">💳 Gerenciamento de Vendas</h1>
         <p className="text-sm sm:text-base text-purple-100">Plataforma Limber Card - Vendas Online</p>
       </div>
+
+      <div className="space-y-4 lg:space-y-6 px-4 lg:px-8">
 
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-md p-4 sm:p-5 lg:p-6">
@@ -720,6 +722,7 @@ export default function VendasPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
