@@ -3,23 +3,22 @@
 import { useState, useEffect, useCallback } from 'react';
 
 interface Venda {
-  localizador: string;
   codigo: number;
+  localizador: string;
   data_hora: string;
   status: string;
+  status_desc: string;
   idorigem: string | null;
   cod_local_venda: number;
   local_venda: string;
-  ec_origem: number;
   nome_titular: string;
   email_titular: string;
   total_liquido: number;
-  pedido_de_cancelamento: any;
+  pedido_de_cancelamento: boolean;
   quantidade: number;
-  formas_pag_desc?: string;
-  data: string;
-  hora: string;
-  status_desc: string;
+  formas_pag_desc: string;
+  data?: string;
+  hora?: string;
 }
 
 export default function VendasPage() {
@@ -64,13 +63,18 @@ export default function VendasPage() {
       
       // Ordenar por data (mais recentes primeiro)
       const vendasOrdenadas = data.sort((a: Venda, b: Venda) => {
-        const [diaA, mesA, anoA] = a.data.split('/');
-        const [horaA, minA, segA] = a.hora.split(':');
-        const dataHoraA = new Date(parseInt(anoA), parseInt(mesA) - 1, parseInt(diaA), parseInt(horaA), parseInt(minA), parseInt(segA));
+        // Usar data_hora como fallback se data/hora não existirem
+        const dataA = a.data && a.hora ? a.data : a.data_hora.split(' ')[0];
+        const horaA = a.data && a.hora ? a.hora : a.data_hora.split(' ')[1];
+        const [diaA, mesA, anoA] = dataA.split('/');
+        const [horaANum, minA, segA] = horaA.split(':');
+        const dataHoraA = new Date(parseInt(anoA), parseInt(mesA) - 1, parseInt(diaA), parseInt(horaANum), parseInt(minA), parseInt(segA || '0'));
         
-        const [diaB, mesB, anoB] = b.data.split('/');
-        const [horaB, minB, segB] = b.hora.split(':');
-        const dataHoraB = new Date(parseInt(anoB), parseInt(mesB) - 1, parseInt(diaB), parseInt(horaB), parseInt(minB), parseInt(segB));
+        const dataB = b.data && b.hora ? b.data : b.data_hora.split(' ')[0];
+        const horaB = b.data && b.hora ? b.hora : b.data_hora.split(' ')[1];
+        const [diaB, mesB, anoB] = dataB.split('/');
+        const [horaBNum, minB, segB] = horaB.split(':');
+        const dataHoraB = new Date(parseInt(anoB), parseInt(mesB) - 1, parseInt(diaB), parseInt(horaBNum), parseInt(minB), parseInt(segB || '0'));
         
         return dataHoraB.getTime() - dataHoraA.getTime(); // Decrescente
       });

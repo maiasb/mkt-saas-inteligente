@@ -30,30 +30,33 @@ interface AuthResponse {
 }
 
 interface Venda {
-  localizador: string;
   codigo: number;
+  localizador: string;
   data_hora: string;
   status: string;
+  status_desc: string;
   idorigem: string | null;
   cod_local_venda: number;
   local_venda: string;
-  ec_origem: number;
   nome_titular: string;
   email_titular: string;
   total_liquido: number;
-  pedido_de_cancelamento: any;
+  pedido_de_cancelamento: boolean;
   quantidade: number;
-  formas_pag_desc?: string;
-  data: string;
-  hora: string;
-  status_desc: string;
+  formas_pag_desc: string;
+  data?: string;
+  hora?: string;
 }
 
 interface ListarVendasParams {
   estabelecOrig?: number;
-  limit?: number;
   dataVendaInit?: string;
   dataVendaFim?: string;
+  dataVisitaInit?: string;
+  dataVisitaFim?: string;
+  statusArray?: string[];
+  nomeOrEmail?: string;
+  localizador?: string;
 }
 
 export class LimberCardRepository {
@@ -116,6 +119,15 @@ export class LimberCardRepository {
   }
 
   /**
+   * Força refresh do token (útil para garantir token fresco em cada requisição)
+   */
+  async getFreshToken(): Promise<string> {
+    this.clearTokenCache();
+    const authData = await this.authenticate();
+    return authData.token;
+  }
+
+  /**
    * Limpa o cache do token (útil em caso de erro 401)
    */
   clearTokenCache(): void {
@@ -125,23 +137,21 @@ export class LimberCardRepository {
 
   /**
    * Lista vendas da plataforma Limber Card
+   * GET /api/vendas com query parameters
    */
   async listarVendas(params: ListarVendasParams = {}): Promise<Venda[]> {
     try {
-      const token = await this.getToken();
+      // Força refresh do token para garantir autenticação válida
+      const token = await this.getFreshToken();
       
-      // Constrói a query string
+      // Monta query parameters
       const queryParams = new URLSearchParams();
       
       if (params.estabelecOrig) {
         queryParams.append('estabelecOrig', params.estabelecOrig.toString());
       }
       
-      if (params.limit) {
-        queryParams.append('limit', params.limit.toString());
-      }
-      
-      // Datas no formato YYYY-MM-DD (formato ISO aceito pela API)
+      // Datas no formato YYYY-MM-DD (ISO 8601)
       if (params.dataVendaInit) {
         queryParams.append('dataVendaInit', params.dataVendaInit);
       }
@@ -150,7 +160,28 @@ export class LimberCardRepository {
         queryParams.append('dataVendaFim', params.dataVendaFim);
       }
 
-      const url = `${this.apiUrl}/vendas${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      if (params.dataVisitaInit) {
+        queryParams.append('dataVisitaInit', params.dataVisitaInit);
+      }
+
+      if (params.dataVisitaFim) {
+        queryParams.append('dataVisitaFim', params.dataVisitaFim);
+      }
+
+      if (params.statusArray && params.statusArray.length > 0) {
+        queryParams.append('statusArray', params.statusArray.join(','));
+      }
+
+      if (params.nomeOrEmail) {
+        queryParams.append('nomeOrEmail', params.nomeOrEmail);
+      }
+
+      if (params.localizador) {
+        queryParams.append('localizador', params.localizador);
+      }
+
+      const queryString = queryParams.toString();
+      const url = `${this.apiUrl}/vendas${queryString ? `?${queryString}` : ''}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -179,10 +210,12 @@ export class LimberCardRepository {
 
   /**
    * Obtém detalhes completos de uma venda específica
+   * GET /api/vendas/venda/{idVenda}
    */
   async obterDetalhesVenda(codigoVenda: number): Promise<any> {
     try {
-      const token = await this.getToken();
+      // Força refresh do token para garantir autenticação válida
+      const token = await this.getFreshToken();
       
       const url = `${this.apiUrl}/vendas/venda/${codigoVenda}`;
 

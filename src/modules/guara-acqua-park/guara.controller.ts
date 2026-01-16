@@ -34,6 +34,8 @@ export class GuaraController {
       const clienteCompleto = await guaraService.buscarClienteCompleto(clienteId);
       
       if (!clienteCompleto) {
+        // Cliente não encontrado - log warning ao invés de erro
+        console.warn(`[GuaraController] Cliente ${clienteId} não encontrado`);
         return NextResponse.json(
           { error: 'Cliente não encontrado' },
           { status: 404 }

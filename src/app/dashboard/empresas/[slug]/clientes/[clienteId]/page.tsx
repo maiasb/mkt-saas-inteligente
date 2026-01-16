@@ -89,13 +89,18 @@ export default function ClienteDetalhesPage() {
                 const response = await fetch(`/api/${empresaSlug}/clientes/${ind.cliente_id}`);
                 
                 if (!response.ok) {
+                  // Cliente indicado não encontrado - ignora silenciosamente
+                  if (response.status === 404) {
+                    console.warn(`Cliente indicado ${ind.cliente_id} não encontrado (404)`);
+                  }
                   return null;
                 }
                 
                 const data = await response.json();
                 return data.cliente || null;
               } catch (error) {
-                console.error('Erro ao buscar indicado:', error);
+                // Erro na busca do indicado - não afeta o fluxo principal
+                console.warn(`Erro ao buscar indicado ${ind.cliente_id}:`, error);
                 return null;
               }
             });
