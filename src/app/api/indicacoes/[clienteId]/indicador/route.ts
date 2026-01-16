@@ -15,7 +15,7 @@ export async function GET(
         link_id,
         created_at
       FROM indicacoes
-      WHERE indicado_id = ?
+      WHERE cliente_id = ? AND indicador_id IS NOT NULL
       ORDER BY created_at DESC
       LIMIT 1
     `, [clienteId]);

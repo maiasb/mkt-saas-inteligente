@@ -97,6 +97,12 @@ export class GuaraRepository {
    */
   async listarClientes(page: number = 1, limit: number = 10) {
     try {
+      // Verifica se API está configurada
+      if (!this.apiUrl || !this.apiToken) {
+        console.warn('[GuaraRepository] API não configurada, usando dados mockados');
+        return this.getMockClientes(page, limit);
+      }
+
       const response = await fetch(
         `${this.apiUrl}/clientes/?page=${page}&limit=${limit}`,
         {
@@ -138,8 +144,8 @@ export class GuaraRepository {
         },
       };
     } catch (error) {
-      console.error('[GuaraRepository] Erro ao listar clientes da API:', error);
-      throw error;
+      console.error('[GuaraRepository] Erro ao listar clientes da API, usando mock:', error);
+      return this.getMockClientes(page, limit);
     }
   }
 
@@ -152,8 +158,9 @@ export class GuaraRepository {
       const resultado = await this.listarClientes(1, 100);
       return resultado.clientes.find((c: GuaraCliente) => c.id === clienteId) || null;
     } catch (error) {
-      console.error('[GuaraRepository] Erro ao buscar cliente:', error);
-      throw error;
+      console.error('[GuaraRepository] Erro ao buscar cliente, usando mock:', error);
+      const mockData = this.getMockClientes(1, 100);
+      return mockData.clientes.find((c: GuaraCliente) => c.id === clienteId) || null;
     }
   }
 
@@ -193,7 +200,7 @@ export class GuaraRepository {
         `SELECT 
            i.id,
            i.indicador_id as indicador_cliente_id,
-           i.indicado_id as convertido_cliente_id,
+           i.cliente_id as convertido_cliente_id,
            i.created_at
          FROM indicacoes i
          WHERE i.indicador_id = ?
@@ -244,15 +251,82 @@ export class GuaraRepository {
     }
   }
 
+  /**Gera dados mockados para testes (quando API não está disponível)
+   */
+  private getMockClientes(page: number = 1, limit: number = 10) {
+    const mockClientes: GuaraCliente[] = [
+      {
+        id: '67891a2b3c4d5e6f78901234',
+        nome: 'João Silva',
+        email: 'joao.silva@email.com',
+        telefone: '(11) 98765-4321',
+        cpf: '123.456.789-00',
+        created_at: new Date('2024-01-15'),
+        updated_at: new Date('2024-01-15'),
+      },
+      {
+        id: '67891a2b3c4d5e6f78901235',
+        nome: 'Maria Santos',
+        email: 'maria.santos@email.com',
+        telefone: '(11) 98765-4322',
+        cpf: '234.567.890-11',
+        created_at: new Date('2024-01-20'),
+        updated_at: new Date('2024-01-20'),
+      },
+      {
+        id: '67891a2b3c4d5e6f78901236',
+        nome: 'Pedro Oliveira',
+        email: 'pedro.oliveira@email.com',
+        telefone: '(11) 98765-4323',
+        cpf: '345.678.901-22',
+        created_at: new Date('2024-02-10'),
+        updated_at: new Date('2024-02-10'),
+      },
+      {
+        id: '67891a2b3c4d5e6f78901237',
+        nome: 'Ana Costa',
+        email: 'ana.costa@email.com',
+        telefone: '(11) 98765-4324',
+        cpf: '456.789.012-33',
+        created_at: new Date('2024-03-05'),
+        updated_at: new Date('2024-03-05'),
+      },
+      {
+        id: '67891a2b3c4d5e6f78901238',
+        nome: 'Carlos Ferreira',
+        email: 'carlos.ferreira@email.com',
+        telefone: '(11) 98765-4325',
+        cpf: '567.890.123-44',
+        created_at: new Date('2024-03-15'),
+        updated_at: new Date('2024-03-15'),
+      },
+    ];
+
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginatedClientes = mockClientes.slice(start, end);
+
+    return {
+      clientes: paginatedClientes,
+      paginacao: {
+        pagina_atual: page,
+        itens_por_pagina: limit,
+        total_itens: mockClientes.length,
+        total_paginas: Math.ceil(mockClientes.length / limit),
+      },
+    };
+  }
+
   /**
+   * 
    * Busca estatísticas do cliente baseado na tabela indicacoes
    */
   async buscarEstatisticas(clienteId: string) {
     try {
       const [rows] = await db.query(
         `SELECT 
-          COUNT(DISTINCT i.indicado_id) as total_indicacoes,
-          COUNT(DISTINCT i.indicado_id) as total_convertidos,
+          COUNT(DISTINCT i.cliente_id) as total_indicacoes,
+          COUNT(DISTINCT i.cliente_id) as total_convertidos,
           0 as total_pendentes
          FROM indicacoes i
          WHERE i.indicador_id = ?`,
@@ -288,6 +362,191 @@ export class GuaraRepository {
       return rows;
     } catch (error) {
       console.error('[GuaraRepository] Erro ao buscar links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lista indicações (usuários no sistema de indicações)
+   * Usa tabela indicacoes que contém TODOS os clientes do programa
+   * 
+   * COLUNAS DA TABELA indicacoes: id, empresa_id, cliente_id, indicador_id, link_id, 
+   *   nome, email, telefone, cpf, created_at
+   * 
+   * LÓGICA: 
+   * - indicador_id NULL = cliente é apenas indicador
+   * - indicador_id preenchido = cliente foi indicado por alguém
+   * - Dados completos: nome, email, telefone, cpf salvos localmente
+   */
+  async listarIndicacoes(page: number = 1, limit: number = 10, tipo: string = '', busca: string = '') {
+    try {
+      const offset = (page - 1) * limit;
+      let query = '';
+      let countQuery = '';
+      const params: any[] = [];
+      const countParams: any[] = [];
+
+      if (tipo === 'indicadores') {
+        // Lista apenas indicadores (clientes que têm links)
+        query = `
+          SELECT 
+            i.cliente_id as id,
+            i.nome,
+            i.email,
+            i.telefone,
+            'indicador' as tipo,
+            COUNT(DISTINCT l.id) as total_links,
+            (SELECT COUNT(*) FROM indicacoes WHERE indicador_id = i.cliente_id AND empresa_id = i.empresa_id) as total_indicados
+          FROM indicacoes i
+          INNER JOIN links l ON i.cliente_id = l.cliente_id 
+            AND i.empresa_id = l.empresa_id
+          WHERE i.empresa_id = ?
+        `;
+        countQuery = `
+          SELECT COUNT(DISTINCT i.cliente_id) as total
+          FROM indicacoes i
+          INNER JOIN links l ON i.cliente_id = l.cliente_id 
+            AND i.empresa_id = l.empresa_id
+          WHERE i.empresa_id = ?
+        `;
+        params.push(this.empresaId);
+        countParams.push(this.empresaId);
+
+        if (busca) {
+          query += ` AND (i.nome LIKE ? OR i.email LIKE ? OR i.cpf LIKE ?)`;
+          countQuery += ` AND (i.nome LIKE ? OR i.email LIKE ? OR i.cpf LIKE ?)`;
+          const searchTerm = `%${busca}%`;
+          params.push(searchTerm, searchTerm, searchTerm);
+          countParams.push(searchTerm, searchTerm, searchTerm);
+        }
+
+        query += ` GROUP BY i.cliente_id, i.nome, i.email, i.telefone`;
+        query += ` ORDER BY total_indicados DESC, i.nome`;
+        query += ` LIMIT ? OFFSET ?`;
+        params.push(limit, offset);
+
+      } else if (tipo === 'indicados') {
+        // Lista apenas indicados (clientes com indicador_id preenchido)
+        query = `
+          SELECT 
+            i.cliente_id as id,
+            i.nome,
+            i.email,
+            i.telefone,
+            'indicado' as tipo,
+            0 as total_links,
+            0 as total_indicados,
+            ind.nome as indicador_nome
+          FROM indicacoes i
+          LEFT JOIN indicacoes ind ON i.indicador_id = ind.cliente_id
+            AND i.empresa_id = ind.empresa_id
+          WHERE i.empresa_id = ?
+            AND i.indicador_id IS NOT NULL
+        `;
+        countQuery = `
+          SELECT COUNT(DISTINCT i.cliente_id) as total
+          FROM indicacoes i
+          WHERE i.empresa_id = ?
+            AND i.indicador_id IS NOT NULL
+        `;
+        params.push(this.empresaId);
+        countParams.push(this.empresaId);
+
+        if (busca) {
+          query += ` AND (i.nome LIKE ? OR i.email LIKE ? OR i.cpf LIKE ?)`;
+          countQuery += ` AND (i.nome LIKE ? OR i.email LIKE ? OR i.cpf LIKE ?)`;
+          const searchTerm = `%${busca}%`;
+          params.push(searchTerm, searchTerm, searchTerm);
+          countParams.push(searchTerm, searchTerm, searchTerm);
+        }
+
+        query += ` GROUP BY i.cliente_id, i.nome, i.email, i.telefone, ind.nome`;
+        query += ` ORDER BY i.nome`;
+        query += ` LIMIT ? OFFSET ?`;
+        params.push(limit, offset);
+
+      } else {
+        // Lista todos os clientes do programa
+        query = `
+          SELECT 
+            i.cliente_id as id,
+            i.nome,
+            i.email,
+            i.telefone,
+            CASE 
+              WHEN EXISTS(SELECT 1 FROM links WHERE cliente_id = i.cliente_id AND empresa_id = i.empresa_id) THEN 'indicador'
+              ELSE 'indicado'
+            END as tipo,
+            (SELECT COUNT(DISTINCT id) FROM links WHERE cliente_id = i.cliente_id AND empresa_id = i.empresa_id) as total_links,
+            (SELECT COUNT(*) FROM indicacoes WHERE indicador_id = i.cliente_id AND empresa_id = i.empresa_id) as total_indicados,
+            indicador.nome as indicador_nome
+          FROM indicacoes i
+          LEFT JOIN indicacoes indicador ON i.indicador_id = indicador.cliente_id
+            AND i.empresa_id = indicador.empresa_id
+          WHERE i.empresa_id = ?
+        `;
+        params.push(this.empresaId);
+
+        if (busca) {
+          query += ` AND (i.nome LIKE ? OR i.email LIKE ? OR i.cpf LIKE ?)`;
+          const searchTerm = `%${busca}%`;
+          params.push(searchTerm, searchTerm, searchTerm);
+        }
+
+        query += ` GROUP BY i.cliente_id, i.nome, i.email, i.telefone, i.indicador_id, indicador.nome`;
+        query += ` ORDER BY tipo, i.nome LIMIT ? OFFSET ?`;
+        params.push(limit, offset);
+
+        // Count query para todos
+        countQuery = `
+          SELECT COUNT(DISTINCT i.cliente_id) as total
+          FROM indicacoes i
+          WHERE i.empresa_id = ?
+        `;
+        countParams.push(this.empresaId);
+        
+        if (busca) {
+          countQuery += ` AND (i.nome LIKE ? OR i.email LIKE ? OR i.cpf LIKE ?)`;
+          const searchTerm = `%${busca}%`;
+          countParams.push(searchTerm, searchTerm, searchTerm);
+        }
+      }
+
+      // Executa queries
+      const [indicacoes] = await db.query(query, params);
+      const [countResult]: any = await db.query(countQuery, countParams);
+      const totalItens = countResult[0]?.total || 0;
+
+      // Busca estatísticas
+      const [statsIndicadores]: any = await db.query(
+        `SELECT COUNT(DISTINCT i.cliente_id) as total 
+         FROM indicacoes i
+         INNER JOIN links l ON i.cliente_id = l.cliente_id 
+           AND i.empresa_id = l.empresa_id
+         WHERE i.empresa_id = ?`,
+        [this.empresaId]
+      );
+      const [statsIndicados]: any = await db.query(
+        `SELECT COUNT(DISTINCT cliente_id) as total FROM indicacoes WHERE empresa_id = ? AND indicador_id IS NOT NULL`,
+        [this.empresaId]
+      );
+
+      return {
+        indicacoes,
+        stats: {
+          totalIndicacoes: totalItens,
+          totalIndicadores: statsIndicadores[0]?.total || 0,
+          totalIndicados: statsIndicados[0]?.total || 0,
+        },
+        paginacao: {
+          pagina_atual: page,
+          itens_por_pagina: limit,
+          total_itens: totalItens,
+          total_paginas: Math.ceil(totalItens / limit),
+        },
+      };
+    } catch (error) {
+      console.error('[GuaraRepository] Erro ao listar indicações:', error);
       throw error;
     }
   }

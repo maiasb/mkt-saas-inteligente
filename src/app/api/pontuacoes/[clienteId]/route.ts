@@ -20,23 +20,30 @@ export async function GET(
       ? pontuacaoResult[0]
       : { total_pontos: 0 };
 
-    // Busca histórico de pontuações
+    // Busca histórico de pontuações com tipo
     const [historico] = await db.query(`
       SELECT 
-        id,
-        empresa_id,
-        pontos,
-        link_id,
-        created_at
-      FROM pontuacoes
-      WHERE cliente_id = ?
-      ORDER BY created_at DESC
+        p.id,
+        p.empresa_id,
+        p.pontos,
+        p.link_id,
+        p.created_at,
+        CASE
+          WHEN p.pontos = 10 THEN 'INDICADOR'
+          WHEN p.pontos = 5 THEN 'INDICADO'
+          ELSE 'INDICADOR'
+        END as tipo
+      FROM pontuacoes p
+      WHERE p.cliente_id = ?
+      ORDER BY p.created_at DESC
     `, [clienteId]);
 
     // Busca clientes indicados por este cliente
     const [indicados] = await db.query(`
       SELECT 
-        indicado_id as cliente_id,
+        cliente_id,
+        nome,
+        email,
         link_id,
         created_at
       FROM indicacoes

@@ -102,6 +102,15 @@ export class GuaraService {
       totalRecompensas: totalConvertidos * 50,
     };
   }
+
+  /**
+   * Lista indicações (usuários no sistema de indicações)
+   * Retorna indicadores (quem tem links) e indicados (quem foi cadastrado via link)
+   */
+  async listarIndicacoes(page: number = 1, limit: number = 10, tipo: string = '', busca: string = '') {
+    const resultado = await guaraRepository.listarIndicacoes(page, limit, tipo, busca);
+    return resultado;
+  }
 }
 
 // Exporta instância singleton

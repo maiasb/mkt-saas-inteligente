@@ -19,7 +19,8 @@ export default function Sidebar() {
     if (pathname.includes('/dashboard/empresas/')) {
       setEmpresasExpanded(true);
     }
-    if (pathname.includes('/dashboard/empresas/guara-acqua-park') || pathname.includes('/dashboard/vendas')) {
+    if (pathname.includes('/dashboard/empresas/guara-acqua-park') || 
+        pathname.includes('/dashboard/vendas')) {
       setEmpresasExpanded(true);
       setGuaraExpanded(true);
     }
@@ -217,6 +218,38 @@ export default function Sidebar() {
                     >
                       <div className="pl-6 pt-1 space-y-1">
                         <Link
+                          href="/dashboard/empresas/guara-acqua-park/dashboard"
+                          onClick={() => setIsOpen(false)}
+                          className={`
+                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-xs
+                            ${
+                              pathname === '/dashboard/empresas/guara-acqua-park/dashboard'
+                                ? 'bg-white/20 shadow-sm font-semibold'
+                                : 'hover:bg-white/10 hover:translate-x-1'
+                            }
+                          `}
+                        >
+                          <span>📊</span>
+                          <span>Dashboard</span>
+                        </Link>
+
+                        <Link
+                          href="/dashboard/empresas/guara-acqua-park/indicacoes"
+                          onClick={() => setIsOpen(false)}
+                          className={`
+                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-xs
+                            ${
+                              pathname.includes('/dashboard/empresas/guara-acqua-park/indicacoes')
+                                ? 'bg-white/20 shadow-sm font-semibold'
+                                : 'hover:bg-white/10 hover:translate-x-1'
+                            }
+                          `}
+                        >
+                          <span>🎯</span>
+                          <span>Indicações</span>
+                        </Link>
+
+                        <Link
                           href="/dashboard/empresas/guara-acqua-park/clientes"
                           onClick={() => setIsOpen(false)}
                           className={`
@@ -228,8 +261,8 @@ export default function Sidebar() {
                             }
                           `}
                         >
-                          <span>🎯</span>
-                          <span>Indicações</span>
+                          <span>👥</span>
+                          <span>Clientes</span>
                         </Link>
 
                         <Link

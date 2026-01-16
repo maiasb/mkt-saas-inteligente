@@ -10,6 +10,7 @@ interface Cliente {
   nome: string;
   email: string;
   telefone?: string;
+  cpf?: string;
 }
 
 interface EmpresaStats {
@@ -32,26 +33,10 @@ export default function ClientesEmpresaPage() {
   const [totalItens, setTotalItens] = useState(0);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [isLoadingLinks, setIsLoadingLinks] = useState(false);
-  const [empresaStats, setEmpresaStats] = useState<EmpresaStats>({
-    totalClientes: 0,
-    totalPontos: 0,
-    totalLinks: 0,
-  });
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const empresa = getEmpresaBySlug(empresaSlug);
-  const fetchEmpresaStats = useCallback(async () => {
-    if (!empresa) return;
-    
-    try {
-      const response = await fetch(`/api/empresas/${empresa.id}/stats`);
-      if (response.ok) {
-        const data = await response.json();
-        setEmpresaStats(data);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas da empresa:', error);
-    }
-  }, [empresa]);
+  
   const fetchClientes = useCallback(async (page: number) => {
     if (!empresa) return;
     
@@ -71,8 +56,7 @@ export default function ClientesEmpresaPage() {
 
   useEffect(() => {
     fetchClientes(paginaAtual);
-    fetchEmpresaStats();
-  }, [paginaAtual, fetchEmpresaStats]);
+  }, [paginaAtual, fetchClientes]);
 
   const openLinkModal = async (cliente: Cliente) => {
     setIsLoadingLinks(true);
@@ -106,6 +90,7 @@ export default function ClientesEmpresaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           clienteId: selectedCliente.id,
+          clienteCpf: selectedCliente.cpf,
           empresaId: empresa.id,
           empresaSlug: empresa.slug
         }),
@@ -210,66 +195,13 @@ export default function ClientesEmpresaPage() {
     <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Todos os Clientes</h1>
+        <p className="text-gray-600 mt-1">
+          Lista completa de clientes da {empresa.nome}
+        </p>
       </div>
 
-      {/* Painel de Informações da Empresa */}
-      <div className="mb-6 bg-white rounded-lg shadow-lg overflow-hidden">
-        <div 
-          className="p-6 text-white"
-          style={{ background: `linear-gradient(135deg, ${empresa.cor} 0%, ${empresa.cor}dd 100%)` }}
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">{empresa.nome}</h2>
-              <div className="space-y-1 text-sm opacity-90">
-                <p>📧 {empresa.email}</p>
-                {empresa.telefone && <p>📱 {empresa.telefone}</p>}
-                {empresa.cnpj && <p>🏢 {empresa.cnpj}</p>}
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50">
-          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4" style={{ borderColor: empresa.cor }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total de Clientes</p>
-                <p className="text-2xl font-bold" style={{ color: empresa.cor }}>
-                  {empresaStats.totalClientes}
-                </p>
-              </div>
-              <div className="text-3xl opacity-50">👥</div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4" style={{ borderColor: empresa.cor }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Pontuação Total</p>
-                <p className="text-2xl font-bold" style={{ color: empresa.cor }}>
-                  {empresaStats.totalPontos}
-                </p>
-              </div>
-              <div className="text-3xl opacity-50">⭐</div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4" style={{ borderColor: empresa.cor }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Links Gerados</p>
-                <p className="text-2xl font-bold" style={{ color: empresa.cor }}>
-                  {empresaStats.totalLinks}
-                </p>
-              </div>
-              <div className="text-3xl opacity-50">🔗</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div>
@@ -311,11 +243,8 @@ export default function ClientesEmpresaPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Telefone
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Links
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Detalhes
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ações
                       </th>
                     </tr>
                   </thead>
@@ -331,23 +260,48 @@ export default function ClientesEmpresaPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {cliente.telefone || '-'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => openLinkModal(cliente)}
-                            className="font-medium hover:underline"
-                            style={{ color: empresa.cor }}
-                          >
-                            Ver Links
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <Link
-                            href={`/dashboard/empresas/${empresaSlug}/clientes/${cliente.id}`}
-                            className="font-medium hover:underline"
-                            style={{ color: empresa.cor }}
-                          >
-                            Ver Detalhes
-                          </Link>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          <div className="relative inline-block text-left">
+                            <button
+                              onClick={() => setOpenDropdownId(openDropdownId === cliente.id ? null : cliente.id)}
+                              className="inline-flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition"
+                              style={{ color: empresa.cor }}
+                            >
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                              </svg>
+                            </button>
+                            {openDropdownId === cliente.id && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-10" 
+                                  onClick={() => setOpenDropdownId(null)}
+                                />
+                                <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                                  <div className="py-1">
+                                    <Link
+                                      href={`/dashboard/empresas/${empresaSlug}/clientes/${cliente.id}`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                      onClick={() => setOpenDropdownId(null)}
+                                    >
+                                      <span>👁️</span>
+                                      Ver Detalhes
+                                    </Link>
+                                    <button
+                                      onClick={() => {
+                                        openLinkModal(cliente);
+                                        setOpenDropdownId(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                      <span>🔗</span>
+                                      Ver Links
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -360,10 +314,51 @@ export default function ClientesEmpresaPage() {
             <div className="xl:hidden space-y-4">
               {clientes.map((cliente) => (
                 <div key={cliente.id} className="bg-white rounded-lg shadow p-4">
-                  <div className="mb-3">
+                  <div className="flex items-start justify-between mb-3">
                     <p className="text-lg font-medium text-gray-900">
                       {cliente.nome}
                     </p>
+                    <div className="relative inline-block text-left">
+                      <button
+                        onClick={() => setOpenDropdownId(openDropdownId === cliente.id ? null : cliente.id)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition"
+                        style={{ color: empresa.cor }}
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                        </svg>
+                      </button>
+                      {openDropdownId === cliente.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setOpenDropdownId(null)}
+                          />
+                          <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                            <div className="py-1">
+                              <Link
+                                href={`/dashboard/empresas/${empresaSlug}/clientes/${cliente.id}`}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                onClick={() => setOpenDropdownId(null)}
+                              >
+                                <span>👁️</span>
+                                Ver Detalhes
+                              </Link>
+                              <button
+                                onClick={() => {
+                                  openLinkModal(cliente);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <span>🔗</span>
+                                Ver Links
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-start">
@@ -374,28 +369,6 @@ export default function ClientesEmpresaPage() {
                       <span className="text-gray-500 w-20">Telefone:</span>
                       <span className="text-gray-900">{cliente.telefone || '-'}</span>
                     </div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-gray-200 flex gap-2">
-                    <button
-                      onClick={() => openLinkModal(cliente)}
-                      className="flex-1 py-2 px-4 rounded-lg transition text-sm font-medium"
-                      style={{ 
-                        backgroundColor: `${empresa.cor}15`,
-                        color: empresa.cor
-                      }}
-                    >
-                      Ver Links
-                    </button>
-                    <Link
-                      href={`/dashboard/empresas/${empresaSlug}/clientes/${cliente.id}`}
-                      className="flex-1 py-2 px-4 rounded-lg transition text-sm font-medium text-center"
-                      style={{ 
-                        backgroundColor: `${empresa.cor}15`,
-                        color: empresa.cor
-                      }}
-                    >
-                      Detalhes
-                    </Link>
                   </div>
                 </div>
               ))}

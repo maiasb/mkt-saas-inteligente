@@ -85,6 +85,28 @@ export class GuaraController {
   }
 
   /**
+   * GET - Lista indicações (indicadores e indicados)
+   */
+  async listarIndicacoes(request: NextRequest) {
+    try {
+      const searchParams = request.nextUrl.searchParams;
+      const page = parseInt(searchParams.get('page') || '1', 10);
+      const limit = parseInt(searchParams.get('limit') || '10', 10);
+      const tipo = searchParams.get('tipo') || '';
+      const busca = searchParams.get('busca') || '';
+
+      const resultado = await this.service.listarIndicacoes(page, limit, tipo, busca);
+      return NextResponse.json(resultado);
+    } catch (error) {
+      console.error('[GuaraController] Erro ao listar indicações:', error);
+      return NextResponse.json(
+        { error: 'Erro ao listar indicações' },
+        { status: 500 }
+      );
+    }
+  }
+
+  /**
    * GET - Estatísticas gerais
    */
   async buscarEstatisticas(request: NextRequest) {

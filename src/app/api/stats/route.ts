@@ -9,7 +9,7 @@ export async function GET() {
       SELECT 
         (SELECT COUNT(*) FROM links WHERE ativo = 1) as totalLinks,
         (SELECT COUNT(DISTINCT cliente_id) FROM pontuacoes) as totalClientes,
-        (SELECT COUNT(DISTINCT indicado_id) FROM indicacoes) as totalUsuariosIndicados,
+        (SELECT COUNT(DISTINCT cliente_id) FROM indicacoes WHERE indicador_id IS NOT NULL) as totalUsuariosIndicados,
         (SELECT COALESCE(SUM(pontos), 0) FROM pontuacoes) as totalPontos
     `);
 

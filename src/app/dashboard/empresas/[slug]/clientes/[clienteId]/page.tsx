@@ -348,7 +348,7 @@ export default function ClienteDetalhesPage() {
               <p className="text-sm text-gray-500 mb-2">Último ganho:</p>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">
-                  {pontuacao.historico[0].tipo === 'INDICADOR' ? 'Como indicador' : 'Como indicado'}
+                  {pontuacao.historico[0].tipo === 'INDICADOR' ? 'Indicou' : 'Foi indicado'}
                 </span>
                 <span className="font-semibold" style={{ color: empresa.cor }}>
                   +{pontuacao.historico[0].pontos} pontos
@@ -467,7 +467,7 @@ export default function ClienteDetalhesPage() {
               >
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">
-                    {item.tipo === 'INDICADOR' ? 'Indicou um cliente' : 'Foi indicado'}
+                    {item.tipo === 'INDICADOR' ? 'Indicou' : 'Foi indicado'}
                   </p>
                   <p className="text-xs text-gray-500">
                     {item.created_at ? new Date(item.created_at).toLocaleDateString('pt-BR', {

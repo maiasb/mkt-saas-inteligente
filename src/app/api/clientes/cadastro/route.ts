@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
     }
 
     const link: any = linkResult[0];
+    
+    console.log('🔍 Link encontrado:', { id: link.id, indicador_id: link.indicador_id, empresa_id: link.empresa_id });
 
     // Verificar se empresa_id corresponde
     if (link.empresa_id !== empresa_id) {
@@ -85,8 +87,8 @@ export async function POST(request: NextRequest) {
     // 3. Verificar se indicação já existe (evitar duplicatas)
     const [existingIndicacao] = await db.query(`
       SELECT id FROM indicacoes
-      WHERE indicador_id = ? AND indicado_id = ?
-    `, [link.indicador_id, clienteGuaraId]);
+      WHERE cliente_id = ?
+    `, [clienteGuaraId]);
 
     if (Array.isArray(existingIndicacao) && existingIndicacao.length > 0) {
       return NextResponse.json(
@@ -95,31 +97,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Registrar indicação
+    // 4. Registrar indicado na tabela indicacoes (com dados completos + indicador_id)
     const indicacaoId = uuidv4();
+    
+    console.log('💾 Salvando indicação:', { 
+      indicacaoId, 
+      empresa_id, 
+      clienteGuaraId, 
+      indicador_id: link.indicador_id,
+      link_id: link.id,
+      nome, 
+      email 
+    });
+    
     await db.query(`
-      INSERT INTO indicacoes (id, empresa_id, indicador_id, indicado_id, link_id, created_at)
-      VALUES (?, ?, ?, ?, ?, NOW())
-    `, [indicacaoId, empresa_id, link.indicador_id, clienteGuaraId, link.id]);
+      INSERT INTO indicacoes (id, empresa_id, cliente_id, indicador_id, link_id, nome, email, telefone, cpf, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [indicacaoId, empresa_id, clienteGuaraId, link.indicador_id, link.id, nome, email, telefone || null, cpf || null]);
 
-    console.log('✅ Indicação registrada:', indicacaoId);
+    console.log('✅ Indicado registrado na tabela indicacoes:', indicacaoId);
 
     // 5. Registrar pontuações
-    // Pontos para o INDICADOR (quem indicou)
+    // Pontos para o INDICADOR (dono do link - quem indicou)
+    // link.indicador_id é o cliente_id do dono do link
     const pontuacaoIndicadorId = uuidv4();
     await db.query(`
       INSERT INTO pontuacoes (id, empresa_id, cliente_id, pontos, link_id, created_at)
       VALUES (?, ?, ?, ?, ?, NOW())
     `, [pontuacaoIndicadorId, empresa_id, link.indicador_id, 10, link.id]);
 
-    // Pontos para o INDICADO (novo cliente)
+    // Pontos para o INDICADO (quem se cadastrou pelo link)
     const pontuacaoIndicadoId = uuidv4();
     await db.query(`
       INSERT INTO pontuacoes (id, empresa_id, cliente_id, pontos, link_id, created_at)
       VALUES (?, ?, ?, ?, ?, NOW())
     `, [pontuacaoIndicadoId, empresa_id, clienteGuaraId, 5, link.id]);
 
-    console.log('✅ Pontuações registradas');
+    console.log('✅ Pontuações registradas - Indicador:', link.indicador_id, '(10pts) | Indicado:', clienteGuaraId, '(5pts)');
 
     return NextResponse.json({
       success: true,
