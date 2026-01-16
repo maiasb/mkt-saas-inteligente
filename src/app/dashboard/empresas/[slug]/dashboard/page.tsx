@@ -1,36 +1,30 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const COLORS = ['#10b981', '#f59e0b'];
+import Link from 'next/link';
+import { getEmpresaBySlug } from '@/config/empresas.config';
 
 interface DashboardData {
   resumo: {
-    totalIndicacoes: number;
-    totalConvertidas: number;
-    totalVendas: number;
-    valorTotal: number;
+    totalClientes: number;
+    totalIndicadores: number;
+    totalIndicados: number;
+    totalLinks: number;
+    totalPontos: number;
   };
-  indicacoesPorMes: Array<{
-    mes: string;
-    indicacoes: number;
-    convertidas: number;
-  }>;
-  vendasPorMes: Array<{
-    mes: string;
-    vendas: number;
-    valor: number;
-  }>;
-  taxaConversao: Array<{
+  indicacoesRecentes: Array<{
+    cliente_id: string;
     nome: string;
-    valor: number;
+    email: string;
+    created_at: string;
+    indicador_nome: string;
   }>;
-  formasPagamento: Array<{
+  topIndicadores: Array<{
+    cliente_id: string;
     nome: string;
-    valor: number;
-    quantidade: number;
+    email: string;
+    total_indicacoes: number;
   }>;
 }
 
@@ -41,47 +35,70 @@ export default function EmpresaDashboardPage() {
   const [erro, setErro] = useState('');
   const [dados, setDados] = useState<DashboardData | null>(null);
 
-  const carregarDados = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErro('');
-      
-      const response = await fetch(`/api/empresas/${slug}/dashboard`);
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar dados do dashboard');
-      }
-      
-      const data = await response.json();
-      setDados(data);
-    } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
-      setErro('Erro ao carregar dados. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  }, [slug]);
+  const empresa = getEmpresaBySlug(slug);
 
   useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        setLoading(true);
+        setErro('');
+        
+        const response = await fetch(`/api/${slug}/dashboard`);
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar dados do dashboard');
+        }
+        
+        const data = await response.json();
+        setDados(data);
+      } catch (error) {
+        console.error('Erro ao carregar dashboard:', error);
+        setErro('Erro ao carregar dados. Tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     carregarDados();
-  }, [carregarDados]);
+  }, [slug]);
+
+  if (!empresa) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          Empresa não encontrada
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Carregando dados...</div>
+      <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
+        <div className="mb-8">
+          <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="bg-white p-6 rounded-lg shadow animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (erro) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
         <div className="text-center">
           <p className="text-xl text-red-600 mb-4">{erro}</p>
           <button
-            onClick={carregarDados}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg text-white font-medium"
+            style={{ backgroundColor: empresa.cor }}
           >
             Tentar Novamente
           </button>
@@ -92,186 +109,201 @@ export default function EmpresaDashboardPage() {
 
   if (!dados) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Nenhum dado disponível</div>
+      <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
+        <div className="text-center text-gray-500">Nenhum dado disponível</div>
       </div>
     );
   }
 
-  const { resumo, indicacoesPorMes, vendasPorMes, taxaConversao, formasPagamento } = dados;
-
-  // Cores para o gráfico de formas de pagamento
-  const PAYMENT_COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  const { resumo, indicacoesRecentes, topIndicadores } = dados;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard - Guará Acqua Park</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard - {empresa.nome}</h1>
+        <p className="text-gray-600 mt-2">Resumo geral do programa de indicações</p>
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-6 rounded-lg shadow">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow border-l-4" style={{ borderColor: empresa.cor }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-800 font-semibold">Total de Indicações</p>
-              <p className="text-3xl font-bold text-purple-900">{resumo.totalIndicacoes}</p>
+              <p className="text-gray-600 text-sm font-medium">Total de Clientes</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{resumo.totalClientes}</p>
+            </div>
+            <span className="text-4xl">👥</span>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Indicadores</p>
+              <p className="text-3xl font-bold text-purple-600 mt-2">{resumo.totalIndicadores}</p>
             </div>
             <span className="text-4xl">🎯</span>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-100 to-green-200 p-6 rounded-lg shadow">
+        <div className="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-800 font-semibold">Indicações Convertidas</p>
-              <p className="text-3xl font-bold text-green-900">{resumo.totalConvertidas}</p>
+              <p className="text-gray-600 text-sm font-medium">Indicados</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{resumo.totalIndicados}</p>
             </div>
             <span className="text-4xl">✅</span>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-6 rounded-lg shadow">
+        <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-800 font-semibold">Total de Vendas</p>
-              <p className="text-3xl font-bold text-blue-900">{resumo.totalVendas}</p>
+              <p className="text-gray-600 text-sm font-medium">Links Ativos</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{resumo.totalLinks}</p>
             </div>
-            <span className="text-4xl">💳</span>
+            <span className="text-4xl">🔗</span>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-pink-100 to-pink-200 p-6 rounded-lg shadow">
+        <div className="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-pink-800 font-semibold">Valor Total</p>
-              <p className="text-3xl font-bold text-pink-900">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(resumo.valorTotal)}
-              </p>
+              <p className="text-gray-600 text-sm font-medium">Total de Pontos</p>
+              <p className="text-3xl font-bold text-yellow-600 mt-2">{resumo.totalPontos}</p>
             </div>
-            <span className="text-4xl">💰</span>
+            <span className="text-4xl">⭐</span>
           </div>
         </div>
       </div>
 
-      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Indicações */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">📊 Indicações por Período</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={indicacoesPorMes}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="indicacoes" stroke="#8b5cf6" strokeWidth={2} name="Indicações" />
-              <Line type="monotone" dataKey="convertidas" stroke="#10b981" strokeWidth={2} name="Convertidas" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Gráfico de Vendas */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">💳 Vendas por Período</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={vendasPorMes}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="vendas" fill="#3b82f6" name="Vendas" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Gráfico de Taxa de Conversão */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">📈 Taxa de Conversão</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={taxaConversao}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="valor"
-              >
-                {taxaConversao.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Gráfico de Faturamento */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">💰 Faturamento por Período</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={vendasPorMes}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: number | undefined) => 
-                  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
-                }
-              />
-              <Legend />
-              <Bar dataKey="valor" fill="#ec4899" name="Faturamento (R$)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Gráfico de Formas de Pagamento */}
-        <div className="bg-white p-6 rounded-lg shadow lg:col-span-2">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">💰 Top 5 Formas de Pagamento</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={formasPagamento} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="nome" type="category" width={150} />
-                <Tooltip 
-                  formatter={(value: number | undefined) => 
-                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
-                  }
-                />
-                <Legend />
-                <Bar dataKey="valor" fill="#8b5cf6" name="Valor Total (R$)" />
-              </BarChart>
-            </ResponsiveContainer>
-            
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={formasPagamento}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => `${entry.nome}: ${entry.quantidade}`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="quantidade"
-                >
-                  {formasPagamento.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PAYMENT_COLORS[index % PAYMENT_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+        {/* Top Indicadores */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">🏆 Top Indicadores</h2>
+            <Link
+              href={`/dashboard/empresas/${slug}/clientes?tipo=indicadores`}
+              className="text-sm font-medium hover:underline"
+              style={{ color: empresa.cor }}
+            >
+              Ver todos
+            </Link>
           </div>
+          {topIndicadores && topIndicadores.length > 0 ? (
+            <div className="space-y-3">
+              {topIndicadores.map((indicador, index) => (
+                <Link
+                  key={indicador.cliente_id}
+                  href={`/dashboard/empresas/${slug}/clientes/${indicador.cliente_id}`}
+                  className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition"
+                  style={{ backgroundColor: `${empresa.cor}05` }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                      style={{ backgroundColor: empresa.cor }}
+                    >
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{indicador.nome}</p>
+                      <p className="text-sm text-gray-600">{indicador.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold" style={{ color: empresa.cor }}>
+                      {indicador.total_indicacoes}
+                    </p>
+                    <p className="text-xs text-gray-600">indicações</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Nenhum indicador ainda
+            </div>
+          )}
         </div>
+
+        {/* Indicações Recentes */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">🕒 Indicações Recentes</h2>
+            <Link
+              href={`/dashboard/empresas/${slug}/indicacoes`}
+              className="text-sm font-medium hover:underline"
+              style={{ color: empresa.cor }}
+            >
+              Ver todas
+            </Link>
+          </div>
+          {indicacoesRecentes && indicacoesRecentes.length > 0 ? (
+            <div className="space-y-3">
+              {indicacoesRecentes.map((indicacao) => (
+                <div
+                  key={indicacao.cliente_id}
+                  className="p-4 rounded-lg border border-gray-200"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{indicacao.nome}</p>
+                      <p className="text-sm text-gray-600">{indicacao.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Indicado por: <span className="font-medium">{indicacao.indicador_nome || 'N/A'}</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">
+                        {new Date(indicacao.created_at).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Nenhuma indicação recente
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Ações Rápidas */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Link
+          href={`/dashboard/empresas/${slug}/clientes`}
+          className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition text-center"
+        >
+          <span className="text-4xl mb-2 block">👥</span>
+          <h3 className="font-bold text-gray-900">Ver Clientes</h3>
+          <p className="text-sm text-gray-600 mt-1">Gerenciar todos os clientes</p>
+        </Link>
+
+        <Link
+          href={`/dashboard/empresas/${slug}/indicacoes`}
+          className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition text-center"
+        >
+          <span className="text-4xl mb-2 block">📊</span>
+          <h3 className="font-bold text-gray-900">Ver Indicações</h3>
+          <p className="text-sm text-gray-600 mt-1">Acompanhar indicações</p>
+        </Link>
+
+        <Link
+          href={`/dashboard/empresas/${slug}/clientes`}
+          className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition text-center"
+        >
+          <span className="text-4xl mb-2 block">🔗</span>
+          <h3 className="font-bold text-gray-900">Gerar Links</h3>
+          <p className="text-sm text-gray-600 mt-1">Criar novos links de indicação</p>
+        </Link>
       </div>
     </div>
   );
