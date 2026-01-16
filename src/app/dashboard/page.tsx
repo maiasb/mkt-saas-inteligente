@@ -55,10 +55,9 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
-      {/* Welcome Section */}
-      <div className="mb-8">
+      {/* Header */}
+      <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Bem-vindo ao painel administrativo Dreams</p>
       </div>
 
       {/* Main Content */}

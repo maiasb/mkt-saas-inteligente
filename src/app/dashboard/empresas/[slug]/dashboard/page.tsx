@@ -104,14 +104,11 @@ export default function EmpresaDashboardPage() {
   const PAYMENT_COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
   return (
-    <div className="pt-20 xl:pt-0">
+    <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl p-4 sm:p-6 lg:p-8 text-white mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">📊 Dashboard - Guará Acqua Park</h1>
-        <p className="text-sm sm:text-base text-purple-100">Indicações e vendas consolidadas</p>
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard - Guará Acqua Park</h1>
       </div>
-
-      <div className="px-4 sm:px-6 lg:px-8">
 
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -275,7 +272,6 @@ export default function EmpresaDashboardPage() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

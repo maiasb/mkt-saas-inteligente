@@ -210,12 +210,7 @@ export default function ClientesEmpresaPage() {
     <div className="p-4 sm:p-6 lg:p-8 pt-20 xl:pt-8">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-2">
-          <Link href="/dashboard/empresas" className="text-gray-600 hover:text-gray-900">
-            ← Voltar
-          </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
-        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
       </div>
 
       {/* Painel de Informações da Empresa */}
