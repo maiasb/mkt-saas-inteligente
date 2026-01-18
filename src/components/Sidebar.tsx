@@ -133,23 +133,6 @@ export default function Sidebar() {
               <span className="font-medium text-sm">Dashboard</span>
             </Link>
 
-            {/* Chat IA */}
-            <Link
-              href="/dashboard/chat-ia"
-              onClick={() => setIsOpen(false)}
-              className={`
-                flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200
-                ${
-                  isActive('/dashboard/chat-ia')
-                    ? 'bg-white/20 shadow-lg transform scale-105'
-                    : 'hover:bg-white/10 hover:translate-x-1'
-                }
-              `}
-            >
-              <span className="text-xl">🤖</span>
-              <span className="font-medium text-sm">Chat IA</span>
-            </Link>
-
             {/* Empresas - Collapsible */}
             <div>
               <button
@@ -328,6 +311,23 @@ export default function Sidebar() {
                 </div>
               </div>
             </div>
+
+            {/* Chat IA */}
+            <Link
+              href="/dashboard/chat-ia"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200
+                ${
+                  isActive('/dashboard/chat-ia')
+                    ? 'bg-white/20 shadow-lg transform scale-105'
+                    : 'hover:bg-white/10 hover:translate-x-1'
+                }
+              `}
+            >
+              <span className="text-xl">🤖</span>
+              <span className="font-medium text-sm">Chat IA</span>
+            </Link>
           </nav>
 
           {/* Footer */}

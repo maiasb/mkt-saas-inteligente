@@ -10,17 +10,47 @@ interface Message {
 }
 
 export default function ChatIAPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Carrega mensagens do localStorage
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('chat_messages');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(parsed.map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        })));
+      } catch (error) {
+        console.error('Erro ao carregar mensagens:', error);
+        // Fallback para mensagem inicial
+        setMessages([{
+          role: 'assistant',
+          content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
+          timestamp: new Date(),
+        }]);
+      }
+    } else {
+      // Mensagem inicial
+      setMessages([{
+        role: 'assistant',
+        content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
+        timestamp: new Date(),
+      }]);
+    }
+  }, []);
+
+  // Salva mensagens no localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chat_messages', JSON.stringify(messages));
+    }
+  }, [messages]);
 
   // Auto-scroll para a última mensagem
   const scrollToBottom = () => {
@@ -132,18 +162,40 @@ export default function ChatIAPage() {
     });
   };
 
+  const clearHistory = () => {
+    if (confirm('Deseja limpar todo o histórico de conversas?')) {
+      localStorage.removeItem('chat_messages');
+      setMessages([{
+        role: 'assistant',
+        content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
+        timestamp: new Date(),
+      }]);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 pt-16 xl:pt-0">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <span className="text-white text-xl">🤖</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <span className="text-white text-xl">🤖</span>
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Chat IA</h1>
+              <p className="text-sm text-gray-500">Assistente com acesso a dados em tempo real</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Chat IA</h1>
-            <p className="text-sm text-gray-500">Assistente com acesso a dados em tempo real</p>
-          </div>
+          <button
+            onClick={clearHistory}
+            className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Limpar
+          </button>
         </div>
       </div>
 
