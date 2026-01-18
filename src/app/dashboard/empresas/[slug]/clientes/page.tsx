@@ -34,15 +34,21 @@ export default function ClientesEmpresaPage() {
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [isLoadingLinks, setIsLoadingLinks] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
 
   const empresa = getEmpresaBySlug(empresaSlug);
   
-  const fetchClientes = useCallback(async (page: number) => {
+  const fetchClientes = useCallback(async (page: number, busca?: string) => {
     if (!empresa) return;
     
     try {
       setLoading(true);
-      const response = await fetch(`/api/${empresaSlug}/clientes?page=${page}&limit=10`);
+      let url = `/api/${empresaSlug}/clientes?page=${page}&limit=10`;
+      if (busca) {
+        url += `&busca=${encodeURIComponent(busca)}`;
+      }
+      const response = await fetch(url);
       const data = await response.json();
       setClientes(data.clientes || []);
       setTotalPaginas(data.paginacao?.total_paginas || 1);
@@ -55,8 +61,20 @@ export default function ClientesEmpresaPage() {
   }, [empresaSlug, empresa]);
 
   useEffect(() => {
-    fetchClientes(paginaAtual);
-  }, [paginaAtual, fetchClientes]);
+    fetchClientes(paginaAtual, searchTerm);
+  }, [paginaAtual, searchTerm, fetchClientes]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchTerm(searchInput);
+    setPaginaAtual(1); // Reset para primeira página ao buscar
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setPaginaAtual(1);
+  };
 
   const openLinkModal = async (cliente: Cliente) => {
     setIsLoadingLinks(true);
@@ -199,6 +217,56 @@ export default function ClientesEmpresaPage() {
         <p className="text-gray-600 mt-1">
           Lista completa de clientes da {empresa.nome}
         </p>
+      </div>
+
+      {/* Barra de Pesquisa */}
+      <div className="mb-6">
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar por CPF, nome, email ou telefone..."
+              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+              style={{ 
+                '--tw-ring-color': `${empresa.cor}40`,
+              } as React.CSSProperties}
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            className="px-6 py-3 rounded-lg text-white font-medium hover:opacity-90 transition-opacity flex items-center gap-2 whitespace-nowrap"
+            style={{ backgroundColor: empresa.cor }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span className="hidden sm:inline">Buscar</span>
+          </button>
+        </form>
+        {searchTerm && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+            <span>Buscando por: <strong>{searchTerm}</strong></span>
+            <button
+              onClick={handleClearSearch}
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              Limpar busca
+            </button>
+          </div>
+        )}
       </div>
 
 

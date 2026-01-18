@@ -95,7 +95,7 @@ export class GuaraRepository {
   /**
    * Lista todos os clientes do Guará Acqua Park da API externa com paginação
    */
-  async listarClientes(page: number = 1, limit: number = 10) {
+  async listarClientes(page: number = 1, limit: number = 10, busca?: string) {
     try {
       // Verifica se API está configurada
       if (!this.apiUrl || !this.apiToken) {
@@ -103,16 +103,18 @@ export class GuaraRepository {
         return this.getMockClientes(page, limit);
       }
 
-      const response = await fetch(
-        `${this.apiUrl}/clientes/?page=${page}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': this.apiToken || '',
-            'User-Agent': 'Dreams-Indicacoes/1.0',
-          },
-        }
-      );
+      let url = `${this.apiUrl}/clientes/?page=${page}&limit=${limit}`;
+      if (busca) {
+        url += `&busca=${encodeURIComponent(busca)}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': this.apiToken || '',
+          'User-Agent': 'Dreams-Indicacoes/1.0',
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`API error: ${response.statusText}`);

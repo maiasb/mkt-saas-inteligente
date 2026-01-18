@@ -376,7 +376,7 @@ export default function ClienteDetalhesPage() {
         </div>
         {links.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            Nenhum link gerado ainda. Clique em "Gerar Novo Link" para criar o primeiro.
+            Nenhum link gerado ainda. Clique em &quot;Gerar Novo Link&quot; para criar o primeiro.
           </div>
         ) : (
           <div className="space-y-4">

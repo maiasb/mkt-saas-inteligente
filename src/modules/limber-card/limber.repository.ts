@@ -183,6 +183,8 @@ export class LimberCardRepository {
       const queryString = queryParams.toString();
       const url = `${this.apiUrl}/vendas${queryString ? `?${queryString}` : ''}`;
 
+      console.log('[LimberCardRepository] Chamando API Limber:', url);
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -192,12 +194,19 @@ export class LimberCardRepository {
       });
 
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error('[LimberCardRepository] Resposta de erro:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorBody
+        });
+        
         // Se for 401, limpa o cache e tenta novamente
         if (response.status === 401) {
           this.clearTokenCache();
           throw new Error('Token expirado. Por favor, tente novamente.');
         }
-        throw new Error(`Erro ao buscar vendas: ${response.statusText}`);
+        throw new Error(`Erro ao buscar vendas: ${response.statusText}. Detalhes: ${errorBody}`);
       }
 
       const vendas: Venda[] = await response.json();

@@ -6,8 +6,8 @@ export class GuaraService {
   /**
    * Lista todos os clientes com paginação
    */
-  async listarClientes(page: number = 1, limit: number = 10) {
-    return await guaraRepository.listarClientes(page, limit);
+  async listarClientes(page: number = 1, limit: number = 10, busca?: string) {
+    return await guaraRepository.listarClientes(page, limit, busca);
   }
 
   /**

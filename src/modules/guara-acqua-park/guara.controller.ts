@@ -14,8 +14,9 @@ export class GuaraController {
       const searchParams = request.nextUrl.searchParams;
       const page = parseInt(searchParams.get('page') || '1', 10);
       const limit = parseInt(searchParams.get('limit') || '10', 10);
+      const busca = searchParams.get('busca') || '';
 
-      const resultado = await this.service.listarClientes(page, limit);
+      const resultado = await this.service.listarClientes(page, limit, busca);
       return NextResponse.json(resultado);
     } catch (error) {
       console.error('[GuaraController] Erro ao listar clientes:', error);
