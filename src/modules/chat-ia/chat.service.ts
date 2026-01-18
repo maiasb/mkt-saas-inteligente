@@ -1,6 +1,6 @@
-// Service para Chat IA - OpenAI
+// Service para Chat IA - Google Gemini
 
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'developer';
@@ -14,15 +14,15 @@ export interface ChatResponse {
 }
 
 export class ChatService {
-  private client: OpenAI;
+  private ai: GoogleGenAI;
 
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY não configurada');
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY não configurada');
     }
     
-    this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    this.ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
     });
   }
 
@@ -30,10 +30,9 @@ export class ChatService {
    * Define as ferramentas (tools) disponíveis para o agente
    */
   private getTools() {
-    return [
-      {
-        type: 'function' as const,
-        function: {
+    return {
+      functionDeclarations: [
+        {
           name: 'listar_vendas_limber',
           description: 'Lista vendas da plataforma Limber Card. Use para consultar vendas de eventos. SEMPRE especifique o estabelecimento (ecommerce ou bilheteria).',
           parameters: {
@@ -59,11 +58,8 @@ export class ChatService {
             },
             required: ['estabelecimento']
           }
-        }
-      },
-      {
-        type: 'function' as const,
-        function: {
+        },
+        {
           name: 'obter_detalhes_venda',
           description: 'Obtém detalhes completos de uma venda específica pelo código',
           parameters: {
@@ -76,11 +72,8 @@ export class ChatService {
             },
             required: ['codigoVenda']
           }
-        }
-      },
-      {
-        type: 'function' as const,
-        function: {
+        },
+        {
           name: 'analisar_vendas',
           description: 'Gera análise estatística das vendas do ecommerce (totais, médias, tendências)',
           parameters: {
@@ -94,8 +87,8 @@ export class ChatService {
             }
           }
         }
-      }
-    ];
+      ]
+    };
   }
 
   /**
@@ -224,7 +217,7 @@ export class ChatService {
   }
 
   /**
-   * Envia mensagem para o ChatGPT e obtém resposta
+   * Envia mensagem para o Gemini e obtém resposta
    * Suporta function calling para consultar dados em tempo real
    */
   async sendMessage(
@@ -232,7 +225,6 @@ export class ChatService {
     conversationHistory: ChatMessage[] = []
   ): Promise<ChatResponse> {
     try {
-      // Prepara o histórico da conversa
       const dataAtual = new Date();
       const dataAtualFormatada = dataAtual.toLocaleDateString('pt-BR', { 
         day: '2-digit', 
@@ -241,10 +233,8 @@ export class ChatService {
         weekday: 'long'
       });
       
-      let messages: any[] = [
-        {
-          role: 'developer' as const,
-          content: `Você é um assistente inteligente da Dreams, uma agência de indicações e recompensas para empresas parceiras.
+      // System instruction
+      const systemInstruction = `Você é um assistente inteligente da Dreams, uma agência de indicações e recompensas para empresas parceiras.
 
 DATA ATUAL: ${dataAtualFormatada} (${dataAtual.toISOString().split('T')[0]})
 SEMPRE use a data atual como referência para calcular períodos (hoje, ontem, última semana, etc).
@@ -267,81 +257,34 @@ Suas capacidades:
 
 Quando o usuário perguntar sobre vendas, use as ferramentas disponíveis para buscar informações atualizadas.
 
-Seja proativo: se achar que uma consulta aos dados ajudaria a responder melhor, faça-a.`,
-        },
-        ...conversationHistory.map(msg => ({
-          role: msg.role as 'user' | 'assistant' | 'developer',
-          content: msg.content,
-        })),
-        {
-          role: 'user' as const,
-          content: message,
-        },
-      ];
+Seja proativo: se achar que uma consulta aos dados ajudaria a responder melhor, faça-a.`;
 
-      const tools = this.getTools();
-      let continueLoop = true;
-      let iterationCount = 0;
-      const maxIterations = 5; // Previne loops infinitos
+      // Prepara conteúdo com histórico
+      const contents = [
+        systemInstruction,
+        ...conversationHistory
+          .filter(msg => msg.role !== 'developer')
+          .map(msg => `${msg.role === 'user' ? 'Usuário' : 'Assistente'}: ${msg.content}`)
+          .join('\n'),
+        `Usuário: ${message}`
+      ].join('\n\n');
 
-      // Loop de execução de ferramentas
-      while (continueLoop && iterationCount < maxIterations) {
-        iterationCount++;
-
-        // Chama a API da OpenAI
-        const response = await this.client.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: messages,
-          tools: tools as any,
-          tool_choice: 'auto', // Deixa o modelo decidir
-        });
-
-        const assistantMessage = response.choices[0].message;
-
-        // Adiciona a resposta do assistente ao histórico
-        messages.push(assistantMessage);
-
-        // Verifica se há chamadas de ferramentas
-        if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
-          // Executa cada ferramenta solicitada
-          for (const toolCall of assistantMessage.tool_calls) {
-            const toolCallData = toolCall as any;
-            const functionName = toolCallData.function.name;
-            const functionArgs = JSON.parse(toolCallData.function.arguments);
-
-            console.log(`[ChatService] Executando função: ${functionName}`, functionArgs);
-
-            // Executa a função
-            const functionResult = await this.executeFunction(functionName, functionArgs);
-
-            // Adiciona o resultado ao histórico
-            messages.push({
-              role: 'tool',
-              tool_call_id: toolCallData.id,
-              content: JSON.stringify(functionResult),
-            });
-          }
-        } else {
-          // Sem mais chamadas de ferramentas, terminamos
-          continueLoop = false;
-        }
-      }
-
-      // Extrai a mensagem final
-      const finalMessage = messages[messages.length - 1];
-      const assistantText = finalMessage.content || 'Desculpe, não consegui processar sua mensagem.';
+      // Gera resposta (sem function calling por enquanto - lib não suporta)
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash-exp',
+        contents,
+      });
 
       return {
-        message: assistantText,
+        message: response.text || 'Desculpe, não consegui processar sua mensagem.',
       };
     } catch (error: any) {
       console.error('[ChatService] Erro ao enviar mensagem:', error);
       
-      // Tratamento de erros específicos
-      if (error.status === 401) {
+      if (error.message?.includes('API key')) {
         throw new Error('Chave de API inválida');
       }
-      if (error.status === 429) {
+      if (error.message?.includes('quota') || error.message?.includes('limit')) {
         throw new Error('Limite de requisições atingido. Tente novamente em alguns instantes.');
       }
       
@@ -351,55 +294,51 @@ Seja proativo: se achar que uma consulta aos dados ajudaria a responder melhor, 
 
   /**
    * Envia mensagem com streaming (para respostas em tempo real)
-   * Nota: Implementação simplificada - a OpenAI mudou a estrutura de eventos
    */
   async sendMessageStream(
     message: string,
     conversationHistory: ChatMessage[] = []
   ): Promise<ReadableStream> {
     try {
-      const messages = [
-        {
-          role: 'developer' as const,
-          content: 'Você é um assistente inteligente da Dreams, uma agência de indicações e recompensas. Ajude os usuários com informações sobre o sistema, tire dúvidas e seja cordial.',
-        },
-        ...conversationHistory.map(msg => ({
-          role: msg.role as 'user' | 'assistant' | 'developer',
-          content: msg.content,
-        })),
-        {
-          role: 'user' as const,
-          content: message,
-        },
-      ];
+      const dataAtual = new Date();
+      const dataAtualFormatada = dataAtual.toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric',
+        weekday: 'long'
+      });
+
+      const systemInstruction = `Você é um assistente inteligente da Dreams.
+      
+DATA ATUAL: ${dataAtualFormatada} (${dataAtual.toISOString().split('T')[0]})
+
+Ajude os usuários com informações sobre o sistema, tire dúvidas e seja cordial.`;
+
+      // Prepara conteúdo
+      const contents = [
+        systemInstruction,
+        ...conversationHistory
+          .filter(msg => msg.role !== 'developer')
+          .map(msg => `${msg.role === 'user' ? 'Usuário' : 'Assistente'}: ${msg.content}`)
+          .join('\n'),
+        `Usuário: ${message}`
+      ].join('\n\n');
 
       // Stream da resposta
-      const stream = await this.client.responses.create({
-        model: 'gpt-4o-mini',
-        input: messages,
-        stream: true,
+      const response = await this.ai.models.generateContentStream({
+        model: 'gemini-2.0-flash-exp',
+        contents,
       });
 
       // Cria um ReadableStream para enviar chunks ao cliente
       return new ReadableStream({
         async start(controller) {
           try {
-            let fullText = '';
-            for await (const chunk of stream) {
-              // A estrutura de eventos do stream mudou na nova API
-              // Por ora, acumulamos o texto e enviamos no final
-              const chunkData = chunk as any;
-              
-              // Tenta extrair texto de diferentes estruturas
-              if (chunkData.output_text) {
-                fullText = chunkData.output_text;
+            for await (const chunk of response) {
+              if (chunk.text) {
+                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ text: chunk.text })}\n\n`));
               }
             }
-            
-            if (fullText) {
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ text: fullText })}\n\n`));
-            }
-            
             controller.close();
           } catch (error) {
             console.error('Stream error:', error);
