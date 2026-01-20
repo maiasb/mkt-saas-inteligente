@@ -1,28 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { randomBytes } from 'crypto';
+import { getEmpresaById } from '@/config/empresas.config';
 
 // GET - Listar todos os links
 export async function GET() {
   try {
-    // Busca links com dados do cliente da tabela indicacoes
+    // Busca links com dados do cliente da tabela indicacoes (SEM JOIN com empresas)
     const [links] = await db.query(`
       SELECT 
         l.*,
-        e.nome as empresa_nome,
         i.nome as cliente_nome,
         i.email as cliente_email,
         (SELECT COUNT(*) FROM indicacoes WHERE indicador_id = l.cliente_id AND empresa_id = l.empresa_id) as usuarios_indicados_count
       FROM links l
-      INNER JOIN empresas e ON e.id = l.empresa_id
       LEFT JOIN indicacoes i ON l.cliente_id = i.cliente_id 
         AND l.empresa_id = i.empresa_id
         AND i.indicador_id IS NULL
-      GROUP BY l.id, e.nome, i.nome, i.email
+      GROUP BY l.id, i.nome, i.email
       ORDER BY l.created_at DESC
     `);
 
-    return NextResponse.json(links);
+    // Adiciona nome da empresa via config
+    const linksWithEmpresa = (links as any[]).map((link: any) => {
+      const empresa = getEmpresaById(link.empresa_id);
+      return {
+        ...link,
+        empresa_nome: empresa?.nome || 'Empresa não encontrada'
+      };
+    });
+
+    return NextResponse.json(linksWithEmpresa);
   } catch (error) {
     console.error('Erro ao listar links:', error);
     return NextResponse.json(

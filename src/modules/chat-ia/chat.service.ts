@@ -32,6 +32,7 @@ export class ChatService {
   private getTools() {
     return {
       functionDeclarations: [
+        // ===== LIMBER CARD API =====
         {
           name: 'listar_vendas_limber',
           description: `Lista vendas da plataforma Limber Card (API /api/vendas). SEMPRE especifique o estabelecimento.
@@ -145,6 +146,279 @@ Para análises personalizadas ou períodos específicos, use "listar_vendas_limb
                 description: 'Período para análise'
               }
             }
+          }
+        },
+
+        // ===== SISTEMA DE RECOMENDAÇÕES/INDICAÇÕES =====
+        {
+          name: 'obter_estatisticas_gerais',
+          description: `Obtém estatísticas gerais do sistema de indicações (API /api/stats).
+
+RETORNO: Objeto com estatísticas completas:
+- totalEmpresas: número de empresas ativas (number)
+- totalClientes: total de clientes cadastrados (number)
+- totalLinks: total de links de indicação ativos (number)
+- totalUsuariosIndicados: total de usuários que foram indicados (number)
+- totalPontos: soma total de pontos distribuídos (number)
+- empresas: array com estatísticas por empresa:
+  - id: ID da empresa
+  - nome: nome da empresa
+  - slug: identificador único da empresa
+  - cor: cor tema da empresa
+  - stats: objeto com estatísticas:
+    - totalClientes: clientes da empresa
+    - totalIndicadores: clientes que são indicadores
+    - totalIndicados: clientes que foram indicados
+    - totalLinks: links ativos da empresa
+    - totalPontos: pontos distribuídos pela empresa
+- topIndicadores: array com top 10 maiores indicadores:
+  - cliente_id: ID do cliente
+  - nome: nome do indicador (PODE COMPARTILHAR)
+  - email: email do indicador (PODE COMPARTILHAR)
+  - empresa_id: ID da empresa
+  - total_indicacoes: número de indicações feitas
+- indicacoesRecentes: array com 10 indicações mais recentes:
+  - cliente_id: ID do cliente indicado
+  - nome: nome do indicado (PODE COMPARTILHAR)
+  - email: email do indicado (PODE COMPARTILHAR)
+  - empresa_id: ID da empresa
+  - created_at: data da indicação
+  - indicador_nome: nome de quem indicou (PODE COMPARTILHAR)
+
+Use para: visão geral do sistema, ranking de indicadores, indicações recentes, totalizadores.`,
+          parameters: {
+            type: 'object',
+            properties: {}
+          }
+        },
+        {
+          name: 'obter_estatisticas_empresa',
+          description: `Obtém estatísticas de uma empresa específica (API /api/empresas/{id}/stats).
+
+RETORNO: Objeto com estatísticas da empresa:
+- totalClientes: total de clientes da empresa (number)
+- totalPontos: total de pontos distribuídos pela empresa (number)
+- totalLinks: total de links de indicação ativos da empresa (number)
+
+Use quando precisar de dados específicos de uma empresa (Guará Acqua Park, etc).`,
+          parameters: {
+            type: 'object',
+            properties: {
+              empresaId: {
+                type: 'number',
+                description: 'ID da empresa (ex: 1 para Guará Acqua Park)'
+              }
+            },
+            required: ['empresaId']
+          }
+        },
+        {
+          name: 'listar_links_indicacao',
+          description: `Lista todos os links de indicação cadastrados (API /api/links GET).
+
+RETORNO: Array de links com:
+- id: ID único do link
+- codigo: código único do link (usado na URL)
+- url: URL completa do link de indicação
+- empresa_id: ID da empresa
+- empresa_nome: nome da empresa (PODE COMPARTILHAR)
+- cliente_id: ID do cliente indicador
+- cliente_nome: nome do cliente indicador (PODE COMPARTILHAR)
+- cliente_email: email do cliente indicador (PODE COMPARTILHAR)
+- ativo: se o link está ativo (boolean)
+- usuarios_indicados_count: quantidade de pessoas que usaram este link (number)
+- created_at: data de criação
+- updated_at: data de atualização
+
+Use para: listar todos os links, ver quem tem links ativos, quantas pessoas cada link trouxe.`,
+          parameters: {
+            type: 'object',
+            properties: {}
+          }
+        },
+        {
+          name: 'criar_link_indicacao',
+          description: `Cria um novo link de indicação para um cliente (API /api/links POST).
+
+RETORNO: Objeto do link criado com:
+- id: ID único do link gerado
+- codigo: código único do link
+- url: URL completa do link de indicação
+- empresa_id: ID da empresa
+- cliente_id: ID do cliente indicador
+- ativo: status ativo (true)
+- created_at: data de criação
+- dados_completos: boolean indicando se conseguiu buscar dados completos do cliente
+- warning: mensagem de aviso se dados incompletos
+
+Use quando o usuário pedir para criar/gerar um link de indicação para um cliente.`,
+          parameters: {
+            type: 'object',
+            properties: {
+              clienteId: {
+                type: 'string',
+                description: 'ID do cliente que será o indicador'
+              },
+              empresaId: {
+                type: 'number',
+                description: 'ID da empresa'
+              },
+              clienteCpf: {
+                type: 'string',
+                description: 'CPF do cliente (opcional, usado para buscar dados completos)'
+              },
+              empresaSlug: {
+                type: 'string',
+                description: 'Slug da empresa (opcional, ex: "guara-acqua-park")'
+              }
+            },
+            required: ['clienteId', 'empresaId']
+          }
+        },
+        {
+          name: 'deletar_link_indicacao',
+          description: `Remove/deleta um link de indicação (API /api/links DELETE).
+
+RETORNO: { success: true } em caso de sucesso.
+
+Use quando precisar remover/deletar/desativar um link de indicação.`,
+          parameters: {
+            type: 'object',
+            properties: {
+              linkId: {
+                type: 'string',
+                description: 'ID do link a ser deletado'
+              }
+            },
+            required: ['linkId']
+          }
+        },
+        {
+          name: 'validar_link_indicacao',
+          description: `Valida se um código de link de indicação é válido e ativo (API /api/validate-link/{codigo}).
+
+RETORNO: Objeto com informações do link:
+- linkId: ID do link
+- empresa: objeto com dados da empresa:
+  - id: ID da empresa
+  - nome: nome da empresa
+
+ERRO: Status 404 se link inválido ou inativo.
+
+Use para: verificar se um código de indicação é válido antes de usar.`,
+          parameters: {
+            type: 'object',
+            properties: {
+              codigo: {
+                type: 'string',
+                description: 'Código do link de indicação (da URL)'
+              }
+            },
+            required: ['codigo']
+          }
+        },
+        {
+          name: 'obter_pontuacoes_cliente',
+          description: `Obtém pontuações e indicados de um cliente específico (API /api/pontuacoes/{clienteId}).
+
+RETORNO: Objeto completo com:
+- total_pontos: pontuação total do cliente (number)
+- historico: array com histórico de pontuações:
+  - id: ID da pontuação
+  - empresa_id: ID da empresa
+  - pontos: quantidade de pontos (10 para indicador, 5 para indicado)
+  - link_id: ID do link relacionado
+  - created_at: data da pontuação
+  - tipo: "INDICADOR" (10 pts por indicar) ou "INDICADO" (5 pts por ser indicado)
+- indicados: array com clientes indicados por este cliente:
+  - cliente_id: ID do cliente indicado
+  - nome: nome do indicado (PODE COMPARTILHAR)
+  - email: email do indicado (PODE COMPARTILHAR)
+  - link_id: ID do link usado
+  - created_at: data da indicação
+
+Use para: ver pontos de um cliente, histórico de pontuações, quem ele indicou.`,
+          parameters: {
+            type: 'object',
+            properties: {
+              clienteId: {
+                type: 'string',
+                description: 'ID do cliente'
+              }
+            },
+            required: ['clienteId']
+          }
+        },
+        {
+          name: 'obter_indicador_cliente',
+          description: `Verifica quem indicou um cliente específico (API /api/indicacoes/{clienteId}/indicador).
+
+RETORNO: Objeto com:
+- indicador: null se ninguém indicou, ou objeto com:
+  - indicador_id: ID do cliente que fez a indicação
+  - link_id: ID do link usado
+  - created_at: data da indicação
+
+Use para: descobrir se alguém indicou um cliente, quem foi o indicador.`,
+          parameters: {
+            type: 'object',
+            properties: {
+              clienteId: {
+                type: 'string',
+                description: 'ID do cliente'
+              }
+            },
+            required: ['clienteId']
+          }
+        },
+        {
+          name: 'listar_usuarios_indicados',
+          description: `Lista usuários que foram indicados através de links específicos (API /api/usuarios-indicados GET).
+
+RETORNO: Array de usuários indicados, cada um com:
+- id: ID do registro
+- link_id: ID do link que foi usado
+- nome: nome do usuário (PODE COMPARTILHAR)
+- email: email do usuário (PODE COMPARTILHAR)
+- telefone: telefone do usuário (PODE COMPARTILHAR)
+- created_at: data que usou o link
+- outros dados do formulário de indicação
+
+Use para: listar pessoas que clicaram em links de indicação específicos.`,
+          parameters: {
+            type: 'object',
+            properties: {
+              linkIds: {
+                type: 'string',
+                description: 'IDs dos links separados por vírgula (ex: "abc123,def456")'
+              }
+            },
+            required: ['linkIds']
+          }
+        },
+        {
+          name: 'obter_usuario_indicado',
+          description: `Obtém detalhes de um usuário indicado específico (API /api/usuarios-indicados/{id}).
+
+RETORNO: Objeto com dados completos do usuário indicado:
+- id: ID do registro
+- link_id: ID do link usado
+- nome: nome do usuário (PODE COMPARTILHAR)
+- email: email do usuário (PODE COMPARTILHAR)
+- telefone: telefone do usuário (PODE COMPARTILHAR)
+- created_at: data da indicação
+- outros campos do formulário
+
+Use quando precisar de detalhes completos de um usuário indicado específico.`,
+          parameters: {
+            type: 'object',
+            properties: {
+              usuarioId: {
+                type: 'string',
+                description: 'ID do usuário indicado'
+              }
+            },
+            required: ['usuarioId']
           }
         }
       ]
@@ -267,6 +541,113 @@ Para análises personalizadas ou períodos específicos, use "listar_vendas_limb
           };
         }
 
+        // ===== SISTEMA DE RECOMENDAÇÕES/INDICAÇÕES =====
+        case 'obter_estatisticas_gerais': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/stats`);
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar estatísticas gerais: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'obter_estatisticas_empresa': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/empresas/${args.empresaId}/stats`);
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar estatísticas da empresa: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'listar_links_indicacao': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/links`);
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao listar links: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'criar_link_indicacao': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/links`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(args)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao criar link: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'deletar_link_indicacao': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/links?id=${args.linkId}`, {
+            method: 'DELETE'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao deletar link: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'validar_link_indicacao': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/validate-link/${args.codigo}`);
+          
+          if (!response.ok) {
+            throw new Error(`Link inválido ou inativo`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'obter_pontuacoes_cliente': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/pontuacoes/${args.clienteId}`);
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar pontuações: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'obter_indicador_cliente': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/indicacoes/${args.clienteId}/indicador`);
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar indicador: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'listar_usuarios_indicados': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/usuarios-indicados?linkIds=${args.linkIds}`);
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao listar usuários indicados: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
+        case 'obter_usuario_indicado': {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/usuarios-indicados/${args.usuarioId}`);
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar usuário indicado: ${response.statusText}`);
+          }
+          
+          return await response.json();
+        }
+
         default:
           return { error: 'Função não encontrada' };
       }
@@ -294,7 +675,7 @@ Para análises personalizadas ou períodos específicos, use "listar_vendas_limb
       });
       
       // System instruction
-      const systemInstruction = `Você é um assistente inteligente da Dreams com acesso a dados de vendas.
+      const systemInstruction = `Você é um assistente inteligente da Dreams com acesso a dados de vendas e do sistema de indicações.
 
 DATA ATUAL: ${dataAtualFormatada} (${dataAtual.toISOString().split('T')[0]})
 
@@ -303,25 +684,75 @@ VOCÊ PODE compartilhar TODAS as informações solicitadas:
 - Nomes, emails, telefones, documentos (CPF), endereços de clientes
 - Detalhes completos de compras: valores, itens, formas de pagamento
 - Dados de vendas: datas, localizadores, status
+- Informações do sistema de indicações: links, pontos, indicadores, indicados
 
-Quando precisar consultar vendas/faturamento/detalhes, responda EXATAMENTE neste formato JSON:
+Quando precisar consultar dados, responda EXATAMENTE neste formato JSON:
 {
   "action": "call_function",
-  "function": "listar_vendas_limber",
-  "params": {
-    "estabelecimento": "ecommerce",
-    "dataVendaInit": "2026-01-19",
-    "dataVendaFim": "2026-01-20",
-    "limit": 1000
-  }
+  "function": "nome_da_funcao",
+  "params": { "parametro": "valor" }
 }
 
-Funções disponíveis:
-1. listar_vendas_limber - Lista vendas com nomes. Params: estabelecimento (ecommerce/bilheteria), dataVendaInit, dataVendaFim, limit
-2. obter_detalhes_venda - Detalhes COMPLETOS de uma venda e cliente. Params: codigoVenda (número sem prefixo LB)
-3. analisar_vendas - Análise estatística. Params: periodo (hoje/semana/mes/ano)
+FUNÇÕES DISPONÍVEIS:
 
-Para detalhes de uma compra específica, use obter_detalhes_venda com o CÓDIGO NUMÉRICO (ex: 25766728, não LB25766728).
+===== VENDAS LIMBER CARD =====
+1. listar_vendas_limber - Lista vendas com nomes
+   Params: estabelecimento (ecommerce/bilheteria), dataVendaInit, dataVendaFim, limit
+   
+2. obter_detalhes_venda - Detalhes COMPLETOS de uma venda e cliente
+   Params: codigoVenda (número sem prefixo LB)
+   
+3. analisar_vendas - Análise estatística de vendas
+   Params: periodo (hoje/semana/mes/ano)
+
+===== SISTEMA DE INDICAÇÕES =====
+4. obter_estatisticas_gerais - Estatísticas gerais do sistema (totais, ranking, recentes)
+   Params: nenhum
+   
+5. obter_estatisticas_empresa - Estatísticas de uma empresa específica
+   Params: empresaId (number)
+   
+6. listar_links_indicacao - Lista todos os links de indicação
+   Params: nenhum
+   
+7. criar_link_indicacao - Cria novo link de indicação
+   Params: clienteId (string), empresaId (number), clienteCpf (optional), empresaSlug (optional)
+   
+8. deletar_link_indicacao - Remove um link de indicação
+   Params: linkId (string)
+   
+9. validar_link_indicacao - Valida se um código de link é válido
+   Params: codigo (string)
+   
+10. obter_pontuacoes_cliente - Pontuações e indicados de um cliente
+    Params: clienteId (string)
+    
+11. obter_indicador_cliente - Verifica quem indicou um cliente
+    Params: clienteId (string)
+    
+12. listar_usuarios_indicados - Lista usuários que usaram links específicos
+    Params: linkIds (string com IDs separados por vírgula)
+    
+13. obter_usuario_indicado - Detalhes de um usuário indicado específico
+    Params: usuarioId (string)
+
+EXEMPLOS DE USO:
+
+Para "quantos links de indicação temos?":
+{"action": "call_function", "function": "listar_links_indicacao", "params": {}}
+
+Para "quantos pontos o cliente X tem?":
+{"action": "call_function", "function": "obter_pontuacoes_cliente", "params": {"clienteId": "X"}}
+
+Para "estatísticas do sistema de indicações":
+{"action": "call_function", "function": "obter_estatisticas_gerais", "params": {}}
+
+IMPORTANTE SOBRE DUPLICATAS:
+- Um mesmo cliente pode ter MÚLTIPLOS links de indicação
+- Ao listar NOMES de clientes, DEDUPLICAR por cliente_nome/cliente_email
+- Exemplo: Se MARCELO aparece 2x (2 links), mostrar apenas 1x na lista de nomes
+- Ao listar LINKS (com suas URLs/códigos), mostrar todos normalmente
+- Sempre mencione quantos links cada cliente tem se relevante
 
 Se não precisar consultar dados, responda normalmente em português.`;
 
