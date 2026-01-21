@@ -35,6 +35,8 @@ export default function VendasPage() {
   const [loadingDetalhes, setLoadingDetalhes] = useState(false);
   const [alertaAberto, setAlertaAberto] = useState(false);
   const [alertaMensagem, setAlertaMensagem] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<string>('');
+  const [formaPagamentoFiltro, setFormaPagamentoFiltro] = useState<string>('');
 
   const carregarVendas = useCallback(async () => {
     // Valida se o estabelecimento foi selecionado
@@ -113,7 +115,23 @@ export default function VendasPage() {
   const totalPaginas = Math.ceil(vendas.length / itensPorPagina);
   const indiceInicial = (paginaAtual - 1) * itensPorPagina;
   const indiceFinal = indiceInicial + itensPorPagina;
-  const vendasPaginadas = vendas.slice(indiceInicial, indiceFinal);
+  
+  // Aplicar filtros de status e forma de pagamento
+  const vendasFiltradas = vendas.filter(venda => {
+    const statusMatch = !statusFiltro || venda.status === statusFiltro;
+    const formaPagMatch = !formaPagamentoFiltro || venda.formas_pag_desc?.toLowerCase().includes(formaPagamentoFiltro.toLowerCase());
+    return statusMatch && formaPagMatch;
+  });
+  
+  const vendasPaginadas = vendasFiltradas.slice(indiceInicial, indiceFinal);
+
+  // Obter opções únicas de formas de pagamento
+  const formasPagamentoUnicas = Array.from(new Set(
+    vendas
+      .map(v => v.formas_pag_desc)
+      .filter(Boolean)
+      .flatMap(forma => forma.split(',').map(f => f.trim()))
+  )).sort();
 
   const irParaPagina = (pagina: number) => {
     setPaginaAtual(pagina);
@@ -197,7 +215,7 @@ export default function VendasPage() {
           </div>
           <div className="sm:col-span-1">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-              Data Início
+              Data da Venda (Início)
             </label>
             <input
               type="date"
@@ -208,7 +226,7 @@ export default function VendasPage() {
           </div>
           <div className="sm:col-span-1">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-              Data Fim
+              Data da Venda (Fim)
             </label>
             <input
               type="date"
@@ -235,6 +253,110 @@ export default function VendasPage() {
             </button>
           </div>
         </div>
+        
+        {/* Filtros Rápidos - Status e Forma de Pagamento */}
+        {vendas.length > 0 && (
+          <div className="mt-4 space-y-3">
+            {/* Filtro de Status */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Filtrar por Status
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    setStatusFiltro('');
+                    setPaginaAtual(1);
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all ${
+                    statusFiltro === '' 
+                      ? 'bg-purple-600 text-white shadow-md' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Todos ({vendas.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setStatusFiltro('A');
+                    setPaginaAtual(1);
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all ${
+                    statusFiltro === 'A' 
+                      ? 'bg-green-600 text-white shadow-md' 
+                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  }`}
+                >
+                  ✓ Aprovadas ({vendas.filter(v => v.status === 'A').length})
+                </button>
+                <button
+                  onClick={() => {
+                    setStatusFiltro('X');
+                    setPaginaAtual(1);
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all ${
+                    statusFiltro === 'X' 
+                      ? 'bg-red-600 text-white shadow-md' 
+                      : 'bg-red-100 text-red-700 hover:bg-red-200'
+                  }`}
+                >
+                  ✕ Canceladas ({vendas.filter(v => v.status === 'X').length})
+                </button>
+                <button
+                  onClick={() => {
+                    setStatusFiltro('R');
+                    setPaginaAtual(1);
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all ${
+                    statusFiltro === 'R' 
+                      ? 'bg-yellow-600 text-white shadow-md' 
+                      : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                  }`}
+                >
+                  ⏳ Reservadas ({vendas.filter(v => v.status === 'R').length})
+                </button>
+              </div>
+            </div>
+
+            {/* Filtro de Forma de Pagamento */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Filtrar por Forma de Pagamento
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    setFormaPagamentoFiltro('');
+                    setPaginaAtual(1);
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all ${
+                    formaPagamentoFiltro === '' 
+                      ? 'bg-purple-600 text-white shadow-md' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Todas
+                </button>
+                {formasPagamentoUnicas.map(forma => (
+                  <button
+                    key={forma}
+                    onClick={() => {
+                      setFormaPagamentoFiltro(forma);
+                      setPaginaAtual(1);
+                    }}
+                    className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all ${
+                      formaPagamentoFiltro === forma 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    {forma} ({vendas.filter(v => v.formas_pag_desc?.includes(forma)).length})
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Estatísticas */}
@@ -243,8 +365,8 @@ export default function VendasPage() {
           <div className="bg-white rounded-xl shadow-md p-4 sm:p-5 lg:p-6">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-600 truncate">Total</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-600 truncate">{vendas.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Total {statusFiltro || formaPagamentoFiltro ? '(Filtrado)' : ''}</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-600 truncate">{vendasFiltradas.length}</p>
               </div>
               <div className="text-2xl sm:text-3xl lg:text-4xl ml-2">📊</div>
             </div>
@@ -255,7 +377,7 @@ export default function VendasPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm text-gray-600 truncate">Aprovadas</p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600 truncate">
-                  {vendas.filter(v => v.status === 'A').length}
+                  {vendasFiltradas.filter(v => v.status === 'A').length}
                 </p>
               </div>
               <div className="text-2xl sm:text-3xl lg:text-4xl ml-2">✅</div>
@@ -267,7 +389,7 @@ export default function VendasPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm text-gray-600 truncate">Canceladas</p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600 truncate">
-                  {vendas.filter(v => v.status === 'X').length}
+                  {vendasFiltradas.filter(v => v.status === 'X').length}
                 </p>
               </div>
               <div className="text-2xl sm:text-3xl lg:text-4xl ml-2">❌</div>
@@ -280,7 +402,7 @@ export default function VendasPage() {
                 <p className="text-xs sm:text-sm text-gray-600 truncate">Valor Total</p>
                 <p className="text-base sm:text-lg lg:text-2xl font-bold text-purple-600 truncate">
                   {formatarMoeda(
-                    vendas.reduce((acc, v) => acc + v.total_liquido, 0)
+                    vendasFiltradas.reduce((acc, v) => acc + v.total_liquido, 0)
                   )}
                 </p>
               </div>
