@@ -35,7 +35,11 @@ export class ChatService {
         // ===== LIMBER CARD API =====
         {
           name: 'listar_vendas_limber',
-          description: `Lista vendas da plataforma Limber Card (API /api/vendas). SEMPRE especifique o estabelecimento.
+          description: `Lista vendas da plataforma Limber Card (API /api/vendas).
+
+ESTABELECIMENTO (OPCIONAL):
+- Se NÃO especificado: retorna vendas de TODOS os estabelecimentos (ecommerce + bilheteria)
+- Se especificado: retorna apenas do estabelecimento escolhido
 
 RETORNO (array de vendas): Cada venda contém:
 - codigo: número único da venda (ex: 20384029)
@@ -65,8 +69,8 @@ VOCÊ PODE compartilhar nomes e emails dos clientes quando solicitado.`,
             properties: {
               estabelecimento: {
                 type: 'string',
-                enum: ['ecommerce', 'bilheteria'],
-                description: 'OBRIGATÓRIO. "ecommerce" (vendas online) ou "bilheteria" (vendas presenciais). Use "ecommerce" por padrão.'
+                enum: ['ecommerce', 'bilheteria', 'todos'],
+                description: 'OPCIONAL. "ecommerce" (vendas online), "bilheteria" (vendas presenciais) ou "todos" (ambos). Se não informado, busca de todos.'
               },
               limit: {
                 type: 'number',
@@ -80,8 +84,7 @@ VOCÊ PODE compartilhar nomes e emails dos clientes quando solicitado.`,
                 type: 'string',
                 description: 'Data final YYYY-MM-DD. Para consultas recentes: use a data atual.'
               }
-            },
-            required: ['estabelecimento']
+            }
           }
         },
         {
@@ -432,12 +435,49 @@ Use quando precisar de detalhes completos de um usuário indicado específico.`,
     try {
       switch (functionName) {
         case 'listar_vendas_limber': {
-          // Valida estabelecimento obrigatório
-          if (!args.estabelecimento) {
-            return { error: 'Estabelecimento é obrigatório. Use "ecommerce" ou "bilheteria".' };
+          // Se não especificou estabelecimento ou pediu "todos", busca de ambos
+          if (!args.estabelecimento || args.estabelecimento === 'todos') {
+            // Busca de ambos os estabelecimentos
+            const estabelecimentos = [
+              { nome: 'ecommerce', id: 2360 },
+              { nome: 'bilheteria', id: 2361 }
+            ];
+
+            const todasVendas = [];
+            
+            for (const estab of estabelecimentos) {
+              const params: any = {
+                estabelecOrig: estab.id.toString()
+              };
+              
+              if (args.limit) {
+                params.limit = args.limit.toString();
+              }
+              
+              if (args.dataVendaInit) {
+                params.dataVendaInit = args.dataVendaInit.split('T')[0];
+              }
+              
+              if (args.dataVendaFim) {
+                params.dataVendaFim = args.dataVendaFim.split('T')[0];
+              }
+
+              try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/limber-card/vendas?${new URLSearchParams(params)}`);
+                
+                if (response.ok) {
+                  const data = await response.json();
+                  todasVendas.push(...data);
+                }
+              } catch (error) {
+                console.error(`[ChatService] Erro ao buscar vendas de ${estab.nome}:`, error);
+              }
+            }
+
+            return todasVendas;
           }
 
-          // Mapeia estabelecimento para ID
+          // Se especificou estabelecimento, busca apenas dele
           const estabelecimentoIds: { [key: string]: number } = {
             'ecommerce': 2360,
             'bilheteria': 2361
@@ -446,7 +486,7 @@ Use quando precisar de detalhes completos de um usuário indicado específico.`,
           const estabelecOrig = estabelecimentoIds[args.estabelecimento];
           
           if (!estabelecOrig) {
-            return { error: 'Estabelecimento inválido. Use "ecommerce" ou "bilheteria".' };
+            return { error: 'Estabelecimento inválido. Use "ecommerce", "bilheteria" ou deixe vazio para todos.' };
           }
 
           // Formata datas para o padrão esperado pela API (YYYY-MM-DD)
@@ -697,7 +737,8 @@ FUNÇÕES DISPONÍVEIS:
 
 ===== VENDAS LIMBER CARD =====
 1. listar_vendas_limber - Lista vendas com nomes
-   Params: estabelecimento (ecommerce/bilheteria), dataVendaInit, dataVendaFim, limit
+   Params: estabelecimento (OPCIONAL: ecommerce/bilheteria/todos - se não informar, busca de todos), dataVendaInit, dataVendaFim, limit
+   IMPORTANTE: Se usuário NÃO especificar estabelecimento, NÃO inclua o parâmetro (busca de todos automaticamente)
    
 2. obter_detalhes_venda - Detalhes COMPLETOS de uma venda e cliente
    Params: codigoVenda (número sem prefixo LB)
