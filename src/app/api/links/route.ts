@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { randomBytes } from 'crypto';
-import { getEmpresaById } from '@/config/empresas.config';
+import { empresasService } from '@/modules/empresas';
 
 // GET - Listar todos os links
 export async function GET() {
@@ -21,10 +21,10 @@ export async function GET() {
       ORDER BY l.created_at DESC
     `);
 
-    // Empresas são hard-coded (tabela `empresas` foi removida na migration 008)
+    const empresas = await empresasService.listar();
     const linksComEmpresa = (links as any[]).map(link => ({
       ...link,
-      empresa_nome: getEmpresaById(link.empresa_id)?.nome ?? null,
+      empresa_nome: empresas.find(e => e.id === link.empresa_id)?.nome ?? null,
     }));
 
     return NextResponse.json(linksComEmpresa);
@@ -41,7 +41,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { clienteId, clienteCpf, empresaId, empresaSlug } = body;
+    const { clienteId, empresaId } = body;
 
     if (!clienteId || !empresaId) {
       return NextResponse.json(
@@ -50,71 +50,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar dados completos do cliente na API externa do Guará usando CPF
-    let clienteNome = null;
-    let clienteEmail = null;
-    let clienteTelefone = null;
-    let clienteCpfFinal = clienteCpf || null;
-    let clienteStatus = null;
-    let clienteAssociadoStatus = null;
-    let clienteDadosCompletos = false;
-
-    try {
-      const guaraApiUrl = process.env.GUARA_API_URL;
-      const guaraApiToken = process.env.GUARA_API_TOKEN;
-
-      if (guaraApiUrl && guaraApiToken) {
-        let apiUrl = '';
-        
-        if (clienteCpf) {
-          // Busca usando o parâmetro busca com CPF (mais confiável)
-          apiUrl = `${guaraApiUrl}/clientes/?busca=${clienteCpf}`;
-        } else {
-          // Fallback: tenta buscar pelo ID se CPF não estiver disponível
-          apiUrl = `${guaraApiUrl}/clientes/${clienteId}`;
-        }
-        
-        console.log('🔍 Buscando cliente na API do Guará:', apiUrl);
-        
-        const clienteResponse = await fetch(apiUrl, {
-          headers: {
-            'Authorization': guaraApiToken,
-            'User-Agent': 'Dreams-Indicacoes/1.0',
-          },
-        });
-
-        if (clienteResponse.ok) {
-          const responseData = await clienteResponse.json();
-          let clienteData = null;
-          
-          // A API pode retornar uma lista ou um objeto único
-          if (responseData.lista && responseData.lista.length > 0) {
-            clienteData = responseData.lista[0];
-          } else if (responseData._id || responseData.id) {
-            clienteData = responseData;
-          }
-          
-          if (clienteData) {
-            clienteNome = clienteData.nome || null;
-            clienteEmail = clienteData.email || null;
-            clienteTelefone = clienteData.telefones?.[0] || null;
-            clienteCpfFinal = clienteData.cpf_cnpj || clienteCpf;
-            clienteStatus = clienteData.status || null;
-            clienteAssociadoStatus = clienteData.associado_status || null;
-            clienteDadosCompletos = true;
-            console.log('✅ Dados completos do cliente obtidos:', { nome: clienteNome, email: clienteEmail, cpf: clienteCpfFinal });
-          } else {
-            console.warn('⚠️ Cliente não encontrado na resposta da API do Guará');
-          }
-        } else {
-          console.warn('⚠️ Erro na resposta da API do Guará:', clienteResponse.status);
-        }
-      } else {
-        console.warn('⚠️ Configuração da API do Guará ausente');
-      }
-    } catch (apiError) {
-      console.warn('⚠️ Erro ao buscar dados do cliente:', apiError);
-      // Continua mesmo se não conseguir buscar os dados
+    const empresa = await empresasService.buscarPorId(empresaId);
+    if (!empresa || !empresa.ativo) {
+      return NextResponse.json(
+        { error: 'Empresa não encontrada ou inativa' },
+        { status: 404 }
+      );
     }
 
     const id = randomBytes(16).toString('hex');
@@ -130,39 +71,19 @@ export async function POST(request: NextRequest) {
       [id, url, codigo, empresaId, clienteId, true]
     );
 
-    console.log('✅ Link criado:', { id, codigo, clienteId });
-
-    // Salva/atualiza dados do indicador na tabela indicacoes
-    const { v4: uuidv4 } = require('uuid');
-    
-    // Verifica se cliente já existe na tabela indicacoes
+    // Garante o registro do indicador na tabela indicacoes (indicador_id = NULL)
     const [existingCliente]: any = await db.query(
       `SELECT id FROM indicacoes WHERE cliente_id = ? AND empresa_id = ?`,
       [clienteId, empresaId]
     );
 
-    if (existingCliente && existingCliente.length > 0) {
-      // Atualiza dados do indicador se houver dados completos
-      if (clienteDadosCompletos) {
-        await db.query(
-          `UPDATE indicacoes 
-           SET nome = ?, email = ?, telefone = ?, cpf = ?
-           WHERE cliente_id = ? AND empresa_id = ?`,
-          [clienteNome, clienteEmail, clienteTelefone, clienteCpfFinal, clienteId, empresaId]
-        );
-        console.log('✅ Dados do indicador atualizados na tabela indicacoes');
-      }
-    } else {
-      // Cria registro do indicador (indicador_id = NULL)
-      const indicacaoId = uuidv4();
+    if (!existingCliente || existingCliente.length === 0) {
       await db.query(
         `INSERT INTO indicacoes 
-         (id, empresa_id, cliente_id, indicador_id, link_id, nome, email, telefone, cpf, created_at)
-         VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, NOW())`,
-        [indicacaoId, empresaId, clienteId, id, 
-         clienteNome || `Cliente ${clienteId}`, clienteEmail, clienteTelefone, clienteCpfFinal]
+         (id, empresa_id, cliente_id, indicador_id, link_id, nome, created_at)
+         VALUES (?, ?, ?, NULL, ?, ?, NOW())`,
+        [randomBytes(16).toString('hex'), empresaId, clienteId, id, `Cliente ${clienteId}`]
       );
-      console.log('✅ Indicador registrado na tabela indicacoes');
     }
 
     const [rows] = await db.query(
@@ -172,11 +93,7 @@ export async function POST(request: NextRequest) {
     
     const link = Array.isArray(rows) ? rows[0] : null;
 
-    return NextResponse.json({
-      ...link,
-      dados_completos: clienteDadosCompletos,
-      warning: !clienteDadosCompletos ? 'Alguns dados do cliente podem estar incompletos' : null
-    });
+    return NextResponse.json(link);
   } catch (error) {
     console.error('Erro ao criar link:', error);
     return NextResponse.json(

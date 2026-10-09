@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getEmpresaBySlug } from '@/config/empresas.config';
+import { useEmpresa } from '@/hooks/useEmpresa';
 
 interface Cliente {
   id: string;
@@ -51,7 +51,7 @@ export default function ClienteDetalhesPage() {
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const empresa = getEmpresaBySlug(empresaSlug);
+  const { empresa, carregandoEmpresa } = useEmpresa(empresaSlug);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,7 +60,7 @@ export default function ClienteDetalhesPage() {
         setError(null);
 
         // Busca dados do cliente na API
-        const clienteResponse = await fetch(`/api/${empresaSlug}/clientes/${clienteId}`);
+        const clienteResponse = await fetch(`/api/empresas/${empresaSlug}/clientes/${clienteId}`);
         
         if (!clienteResponse.ok) {
           throw new Error('Erro ao buscar dados do cliente');
@@ -86,7 +86,7 @@ export default function ClienteDetalhesPage() {
           if (Array.isArray(pontuacaoData.indicados) && pontuacaoData.indicados.length > 0) {
             const indicadosPromises = pontuacaoData.indicados.map(async (ind: any) => {
               try {
-                const response = await fetch(`/api/${empresaSlug}/clientes/${ind.cliente_id}`);
+                const response = await fetch(`/api/empresas/${empresaSlug}/clientes/${ind.cliente_id}`);
                 
                 if (!response.ok) {
                   // Cliente indicado não encontrado - ignora silenciosamente
@@ -130,8 +130,7 @@ export default function ClienteDetalhesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           clienteId: cliente.id,
-          empresaId: empresa.id,
-          empresaSlug: empresa.slug
+          empresaId: empresa.id
         }),
       });
 
@@ -142,7 +141,7 @@ export default function ClienteDetalhesPage() {
       }
 
       // Recarrega os links do cliente
-      const clienteResponse = await fetch(`/api/${empresaSlug}/clientes/${clienteId}`);
+      const clienteResponse = await fetch(`/api/empresas/${empresaSlug}/clientes/${clienteId}`);
       
       if (clienteResponse.ok) {
         const clienteData = await clienteResponse.json();
@@ -157,6 +156,10 @@ export default function ClienteDetalhesPage() {
       setIsGeneratingLink(false);
     }
   };
+
+  if (carregandoEmpresa) {
+    return <div className="p-8 text-gray-600">Carregando...</div>;
+  }
 
   if (!empresa) {
     return (

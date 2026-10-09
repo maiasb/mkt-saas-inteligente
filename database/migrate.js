@@ -8,7 +8,7 @@ async function runMigrations() {
     port: parseInt(process.env.DB_PORT || '3306'),
     user: process.env.DB_USER || 'maia',
     password: process.env.DB_PASSWORD || 'ForTheHorde!',
-    database: process.env.DB_NAME || 'dreams_indicacoes',
+    database: process.env.DB_NAME || 'agencia_indicacoes',
     multipleStatements: true,
   });
 

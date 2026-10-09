@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { getEmpresasAtivas } from '@/config/empresas.config';
+import { empresasService } from '@/modules/empresas';
 
 export async function GET() {
   try {
-    const empresasAtivas = getEmpresasAtivas();
+    const empresasAtivas = await empresasService.listar(true);
 
     // Estatísticas gerais
     const [result] = await db.query(`

@@ -14,7 +14,7 @@ export default function LoginPage() {
     setError('');
 
     // Simulação de autenticação (substituir por API real futuramente)
-    if (email === 'admin@dreams.com' && password === 'admin123') {
+    if (email === 'admin@agencia.com' && password === 'admin123') {
       localStorage.setItem('isAuthenticated', 'true');
       router.push('/dashboard');
     } else {
@@ -26,7 +26,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500">
       <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Dreams</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Agência de Marketing</h1>
           <p className="text-gray-600 mt-2">Painel Administrativo</p>
         </div>
 
@@ -41,7 +41,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
-              placeholder="admin@dreams.com"
+              placeholder="admin@agencia.com"
               required
             />
           </div>
@@ -77,7 +77,7 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-600">
           <p>Credenciais de teste:</p>
-          <p>Email: admin@dreams.com</p>
+          <p>Email: admin@agencia.com</p>
           <p>Senha: admin123</p>
         </div>
       </div>

@@ -129,7 +129,7 @@ export default function RegistroPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-4">
       <div className="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Dreams</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Agência de Marketing</h1>
           <p className="text-gray-600 mt-2">
             Cadastro por indicação de <strong>{linkData?.empresa.nome}</strong>
           </p>

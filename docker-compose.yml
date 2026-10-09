@@ -4,9 +4,9 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
-      MYSQL_DATABASE: ${DB_NAME:-dreams_indicacoes}
-      MYSQL_USER: ${DB_USER:-dreams}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-dreams}
+      MYSQL_DATABASE: ${DB_NAME:-agencia_indicacoes}
+      MYSQL_USER: ${DB_USER:-agencia}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-agencia}
       TZ: America/Sao_Paulo
     volumes:
       - db_data:/var/lib/mysql
@@ -20,7 +20,7 @@ services:
 
   # Aplica as migrations e encerra; o app só sobe depois que ela termina com sucesso
   migrate:
-    image: dreams-indicacoes:local
+    image: agencia-indicacoes:local
     build:
       context: .
       args:
@@ -29,16 +29,16 @@ services:
     environment: &db_env
       DB_HOST: db
       DB_PORT: 3306
-      DB_USER: ${DB_USER:-dreams}
-      DB_PASSWORD: ${DB_PASSWORD:-dreams}
-      DB_NAME: ${DB_NAME:-dreams_indicacoes}
+      DB_USER: ${DB_USER:-agencia}
+      DB_PASSWORD: ${DB_PASSWORD:-agencia}
+      DB_NAME: ${DB_NAME:-agencia_indicacoes}
     depends_on:
       db:
         condition: service_healthy
     restart: "no"
 
   app:
-    image: dreams-indicacoes:local
+    image: agencia-indicacoes:local
     build:
       context: .
       args:
@@ -47,11 +47,8 @@ services:
     environment:
       <<: *db_env
       NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}
-      GUARA_API_URL: ${GUARA_API_URL:-}
-      GUARA_API_TOKEN: ${GUARA_API_TOKEN:-}
-      LIMBER_CARD_API_URL: ${LIMBER_CARD_API_URL:-}
-      LIMBER_CARD_USER: ${LIMBER_CARD_USER:-}
-      LIMBER_CARD_PASSWORD: ${LIMBER_CARD_PASSWORD:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:

@@ -3,26 +3,39 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { getEmpresasAtivas } from '@/config/empresas.config';
+import { EmpresaConfig } from '@/config/empresas.config';
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [empresasExpanded, setEmpresasExpanded] = useState(false);
-  const [guaraExpanded, setGuaraExpanded] = useState(false);
+  const [empresas, setEmpresas] = useState<EmpresaConfig[]>([]);
+  const [empresaExpandida, setEmpresaExpandida] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
-  const empresas = getEmpresasAtivas();
+  useEffect(() => {
+    const carregarEmpresas = async () => {
+      try {
+        const response = await fetch('/api/empresas');
+        if (response.ok) {
+          setEmpresas(await response.json());
+        }
+      } catch (error) {
+        console.error('Erro ao carregar empresas:', error);
+      }
+    };
+
+    carregarEmpresas();
+  }, []);
 
   // Auto-expandir empresas se estiver em uma página de empresa
   useEffect(() => {
     if (pathname.includes('/dashboard/empresas/')) {
       setEmpresasExpanded(true);
     }
-    if (pathname.includes('/dashboard/empresas/guara-acqua-park') || 
-        pathname.includes('/dashboard/vendas')) {
-      setEmpresasExpanded(true);
-      setGuaraExpanded(true);
+    const match = pathname.match(/^\/dashboard\/empresas\/([^/]+)/);
+    if (match) {
+      setEmpresaExpandida(match[1]);
     }
   }, [pathname]);
 
@@ -108,8 +121,8 @@ export default function Sidebar() {
               </button>
             )}
             
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-pink-100">
-              Dreams
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-pink-100">
+              Agência de Marketing
             </h1>
             <p className="text-purple-100 text-sm mt-1">Painel Admin</p>
           </div>
@@ -175,125 +188,14 @@ export default function Sidebar() {
                 `}
               >
                 <div className="pl-4 pt-2 space-y-1">
-                  {/* Guará Acqua Park - Expandível */}
-                  <div>
-                    <button
-                      onClick={() => setGuaraExpanded(!guaraExpanded)}
-                      className={`
-                        w-full flex items-center justify-between gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm
-                        ${
-                          isEmpresaActive('guara-acqua-park') || pathname.includes('/dashboard/vendas')
-                            ? 'bg-white/20 shadow-md font-semibold'
-                            : 'hover:bg-white/10 hover:translate-x-1'
+                  {empresas.map((empresa) => (
+                    <div key={empresa.id}>
+                      <button
+                        onClick={() =>
+                          setEmpresaExpandida(empresaExpandida === empresa.slug ? null : empresa.slug)
                         }
-                      `}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-cyan-400" />
-                        <span>Guará Acqua Park</span>
-                      </div>
-                      <svg
-                        className={`w-4 h-4 transition-transform duration-200 ${
-                          guaraExpanded ? 'rotate-180' : ''
-                        }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </button>
-
-                    {/* Sub-items do Guará */}
-                    <div
-                      className={`
-                        overflow-hidden transition-all duration-300 ease-in-out
-                        ${guaraExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
-                      `}
-                    >
-                      <div className="pl-6 pt-1 space-y-1">
-                        <Link
-                          href="/dashboard/empresas/guara-acqua-park/dashboard"
-                          onClick={() => setIsOpen(false)}
-                          className={`
-                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-xs
-                            ${
-                              pathname === '/dashboard/empresas/guara-acqua-park/dashboard'
-                                ? 'bg-white/20 shadow-sm font-semibold'
-                                : 'hover:bg-white/10 hover:translate-x-1'
-                            }
-                          `}
-                        >
-                          <span>📊</span>
-                          <span>Dashboard</span>
-                        </Link>
-
-                        <Link
-                          href="/dashboard/empresas/guara-acqua-park/indicacoes"
-                          onClick={() => setIsOpen(false)}
-                          className={`
-                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-xs
-                            ${
-                              pathname.includes('/dashboard/empresas/guara-acqua-park/indicacoes')
-                                ? 'bg-white/20 shadow-sm font-semibold'
-                                : 'hover:bg-white/10 hover:translate-x-1'
-                            }
-                          `}
-                        >
-                          <span>🎯</span>
-                          <span>Indicações</span>
-                        </Link>
-
-                        <Link
-                          href="/dashboard/empresas/guara-acqua-park/clientes"
-                          onClick={() => setIsOpen(false)}
-                          className={`
-                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-xs
-                            ${
-                              pathname.includes('/dashboard/empresas/guara-acqua-park/clientes')
-                                ? 'bg-white/20 shadow-sm font-semibold'
-                                : 'hover:bg-white/10 hover:translate-x-1'
-                            }
-                          `}
-                        >
-                          <span>👥</span>
-                          <span>Clientes</span>
-                        </Link>
-
-                        <Link
-                          href="/dashboard/vendas"
-                          onClick={() => setIsOpen(false)}
-                          className={`
-                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-xs
-                            ${
-                              pathname.includes('/dashboard/vendas')
-                                ? 'bg-white/20 shadow-sm font-semibold'
-                                : 'hover:bg-white/10 hover:translate-x-1'
-                            }
-                          `}
-                        >
-                          <span>💳</span>
-                          <span>Vendas (Limber)</span>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Outras empresas */}
-                  {empresas
-                    .filter((empresa) => empresa.slug !== 'guara-acqua-park')
-                    .map((empresa) => (
-                      <Link
-                        key={empresa.id}
-                        href={`/dashboard/empresas/${empresa.slug}/clientes`}
-                        onClick={() => setIsOpen(false)}
                         className={`
-                          flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm
+                          w-full flex items-center justify-between gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm
                           ${
                             isEmpresaActive(empresa.slug)
                               ? 'bg-white/20 shadow-md font-semibold'
@@ -301,13 +203,79 @@ export default function Sidebar() {
                           }
                         `}
                       >
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: empresa.cor }}
-                        />
-                        <span>{empresa.nome}</span>
-                      </Link>
-                    ))}
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: empresa.cor }}
+                          />
+                          <span>{empresa.nome}</span>
+                        </div>
+                        <svg
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            empresaExpandida === empresa.slug ? 'rotate-180' : ''
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      <div
+                        className={`
+                          overflow-hidden transition-all duration-300 ease-in-out
+                          ${empresaExpandida === empresa.slug ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+                        `}
+                      >
+                        <div className="pl-6 pt-1 space-y-1">
+                          {[
+                            { icone: '📊', rotulo: 'Dashboard', caminho: 'dashboard' },
+                            { icone: '🎯', rotulo: 'Indicações', caminho: 'indicacoes' },
+                            { icone: '👥', rotulo: 'Clientes', caminho: 'clientes' },
+                          ].map((item) => (
+                            <Link
+                              key={item.caminho}
+                              href={`/dashboard/empresas/${empresa.slug}/${item.caminho}`}
+                              onClick={() => setIsOpen(false)}
+                              className={`
+                                flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-xs
+                                ${
+                                  pathname.includes(`/dashboard/empresas/${empresa.slug}/${item.caminho}`)
+                                    ? 'bg-white/20 shadow-sm font-semibold'
+                                    : 'hover:bg-white/10 hover:translate-x-1'
+                                }
+                              `}
+                            >
+                              <span>{item.icone}</span>
+                              <span>{item.rotulo}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Link
+                    href="/dashboard/configuracoes/empresas"
+                    onClick={() => setIsOpen(false)}
+                    className={`
+                      flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm
+                      ${
+                        pathname.startsWith('/dashboard/configuracoes/empresas')
+                          ? 'bg-white/20 shadow-md font-semibold'
+                          : 'hover:bg-white/10 hover:translate-x-1'
+                      }
+                    `}
+                  >
+                    <span>⚙️</span>
+                    <span>Gerenciar empresas</span>
+                  </Link>
                 </div>
               </div>
             </div>

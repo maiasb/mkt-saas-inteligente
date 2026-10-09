@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
+import { empresasService } from '@/modules/empresas';
+import { programaService } from '@/modules/programa-indicacao';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,9 +43,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. SIMULAÇÃO: Cadastrar cliente na API do Guará
-    // TODO: Substituir por chamada real quando endpoint estiver pronto
-    console.log('🔄 [SIMULADO] Cadastrando cliente na API Guará:', {
+    // Regras de negócio da empresa (pontos e limite de indicações)
+    const empresa = await empresasService.buscarPorId(empresa_id);
+    if (!empresa || !empresa.ativo) {
+      return NextResponse.json(
+        { error: 'Empresa não encontrada ou inativa' },
+        { status: 404 }
+      );
+    }
+
+    if (!(await programaService.indicadorPodeIndicar(empresa, link.indicador_id))) {
+      return NextResponse.json(
+        { error: 'Limite de indicações do indicador atingido' },
+        { status: 400 }
+      );
+    }
+
+    // 2. SIMULAÇÃO: cadastro do cliente no sistema externo da empresa
+    // TODO: substituir por chamada real quando o endpoint estiver disponível
+    console.log('🔄 [SIMULADO] Cadastrando cliente no sistema externo:', {
       nome,
       email,
       telefone,
@@ -51,44 +69,18 @@ export async function POST(request: NextRequest) {
       empresa_id
     });
 
-    // Simulando resposta da API Guará
-    const clienteGuaraId = `MOCK_${uuidv4().substring(0, 8)}`;
+    const clienteExternoId = `MOCK_${uuidv4().substring(0, 8)}`;
     
     // Simulação de delay da API
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    /* 
-    // CÓDIGO REAL (descomentar quando API Guará estiver pronta):
-    const guaraResponse = await fetch('https://api.guarapark.app/v3/thirdy-party/clientes', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GUARA_API_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        nome,
-        email,
-        telefone,
-        cpf,
-        // outros campos necessários
-      })
-    });
-
-    if (!guaraResponse.ok) {
-      throw new Error('Erro ao cadastrar cliente na API Guará');
-    }
-
-    const guaraData = await guaraResponse.json();
-    const clienteGuaraId = guaraData.cliente_id;
-    */
-
-    console.log('✅ [SIMULADO] Cliente cadastrado no Guará com ID:', clienteGuaraId);
+    console.log('✅ [SIMULADO] Cliente cadastrado com ID:', clienteExternoId);
 
     // 3. Verificar se indicação já existe (evitar duplicatas)
     const [existingIndicacao] = await db.query(`
       SELECT id FROM indicacoes
       WHERE cliente_id = ?
-    `, [clienteGuaraId]);
+    `, [clienteExternoId]);
 
     if (Array.isArray(existingIndicacao) && existingIndicacao.length > 0) {
       return NextResponse.json(
@@ -103,7 +95,7 @@ export async function POST(request: NextRequest) {
     console.log('💾 Salvando indicação:', { 
       indicacaoId, 
       empresa_id, 
-      clienteGuaraId, 
+      clienteExternoId, 
       indicador_id: link.indicador_id,
       link_id: link.id,
       nome, 
@@ -113,7 +105,7 @@ export async function POST(request: NextRequest) {
     await db.query(`
       INSERT INTO indicacoes (id, empresa_id, cliente_id, indicador_id, link_id, nome, email, telefone, cpf, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    `, [indicacaoId, empresa_id, clienteGuaraId, link.indicador_id, link.id, nome, email, telefone || null, cpf || null]);
+    `, [indicacaoId, empresa_id, clienteExternoId, link.indicador_id, link.id, nome, email, telefone || null, cpf || null]);
 
     console.log('✅ Indicado registrado na tabela indicacoes:', indicacaoId);
 
@@ -124,27 +116,27 @@ export async function POST(request: NextRequest) {
     await db.query(`
       INSERT INTO pontuacoes (id, empresa_id, cliente_id, pontos, link_id, created_at)
       VALUES (?, ?, ?, ?, ?, NOW())
-    `, [pontuacaoIndicadorId, empresa_id, link.indicador_id, 10, link.id]);
+    `, [pontuacaoIndicadorId, empresa_id, link.indicador_id, empresa.regras.pontos_indicador, link.id]);
 
     // Pontos para o INDICADO (quem se cadastrou pelo link)
     const pontuacaoIndicadoId = uuidv4();
     await db.query(`
       INSERT INTO pontuacoes (id, empresa_id, cliente_id, pontos, link_id, created_at)
       VALUES (?, ?, ?, ?, ?, NOW())
-    `, [pontuacaoIndicadoId, empresa_id, clienteGuaraId, 5, link.id]);
+    `, [pontuacaoIndicadoId, empresa_id, clienteExternoId, empresa.regras.pontos_indicado, link.id]);
 
-    console.log('✅ Pontuações registradas - Indicador:', link.indicador_id, '(10pts) | Indicado:', clienteGuaraId, '(5pts)');
+    console.log('✅ Pontuações registradas - Indicador:', link.indicador_id, `(${empresa.regras.pontos_indicador}pts) | Indicado:`, clienteExternoId, `(${empresa.regras.pontos_indicado}pts)`);
 
     return NextResponse.json({
       success: true,
       message: 'Cliente cadastrado e indicação registrada com sucesso',
       data: {
-        cliente_id: clienteGuaraId,
+        cliente_id: clienteExternoId,
         indicacao_id: indicacaoId,
         indicador_id: link.indicador_id,
         pontos: {
-          indicador: 10,
-          indicado: 5
+          indicador: empresa.regras.pontos_indicador,
+          indicado: empresa.regras.pontos_indicado
         },
         simulado: true // Remove quando API real estiver em uso
       }

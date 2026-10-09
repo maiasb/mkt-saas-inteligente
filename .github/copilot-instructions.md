@@ -1,7 +1,7 @@
-# Dreams - Admin Panel Project
+# Agência de Marketing - Admin Panel Project
 
 ## Project Overview
-Admin panel for Dreams agency recommendation and rewards system for partner companies.
+Admin panel for the marketing agency's recommendation and rewards system for the companies it serves.
 
 ## Features
 - Authentication system with login page
