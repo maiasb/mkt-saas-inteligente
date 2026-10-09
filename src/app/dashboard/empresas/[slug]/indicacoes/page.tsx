@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getEmpresaBySlug } from '@/config/empresas.config';
+import { useEmpresa } from '@/hooks/useEmpresa';
 
 interface Indicacao {
   id: string;
@@ -39,7 +39,7 @@ export default function IndicacoesPage() {
     totalIndicados: 0,
   });
 
-  const empresa = getEmpresaBySlug(empresaSlug);
+  const { empresa, carregandoEmpresa } = useEmpresa(empresaSlug);
 
   const fetchIndicacoes = useCallback(async (page: number) => {
     if (!empresa) return;
@@ -53,7 +53,7 @@ export default function IndicacoesPage() {
         busca: busca,
       });
 
-      const response = await fetch(`/api/${empresaSlug}/indicacoes?${params}`);
+      const response = await fetch(`/api/empresas/${empresaSlug}/indicacoes?${params}`);
       const data = await response.json();
       
       setIndicacoes(data.indicacoes || []);
@@ -85,6 +85,10 @@ export default function IndicacoesPage() {
       setPaginaAtual(newPage);
     }
   };
+
+  if (carregandoEmpresa) {
+    return <div className="p-8 text-gray-600">Carregando...</div>;
+  }
 
   if (!empresa) {
     return (

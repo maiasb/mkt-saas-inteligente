@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dreams - Painel Administrativo",
+  title: "Agência de Marketing - Painel Administrativo",
   description: "Sistema de recomendações e premiações",
 };
 

@@ -38,7 +38,7 @@ export default function FloatingChat() {
       // Mensagem inicial
       setMessages([{
         role: 'assistant',
-        content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema. Como posso ajudar?',
+        content: 'Olá! Sou o assistente virtual da Agência de Marketing. Posso ajudar você consultando dados em tempo real do sistema. Como posso ajudar?',
         timestamp: new Date(),
       }]);
     }
@@ -178,7 +178,7 @@ export default function FloatingChat() {
     if (confirm('Deseja iniciar uma nova conversa? A conversa atual será apagada.')) {
       setMessages([{
         role: 'assistant',
-        content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema. Como posso ajudar?',
+        content: 'Olá! Sou o assistente virtual da Agência de Marketing. Posso ajudar você consultando dados em tempo real do sistema. Como posso ajudar?',
         timestamp: new Date(),
       }]);
       localStorage.removeItem('chat_messages');
@@ -233,7 +233,7 @@ export default function FloatingChat() {
               </div>
               <div>
                 <h3 className="font-bold">Chat IA</h3>
-                <p className="text-xs text-purple-100">Assistente Dreams</p>
+                <p className="text-xs text-purple-100">Assistente da Agência</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -269,7 +269,7 @@ export default function FloatingChat() {
                   // Limpa o histórico de conversas
                   setMessages([{
                     role: 'assistant',
-                    content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema. Como posso ajudar?',
+                    content: 'Olá! Sou o assistente virtual da Agência de Marketing. Posso ajudar você consultando dados em tempo real do sistema. Como posso ajudar?',
                     timestamp: new Date(),
                   }]);
                   localStorage.removeItem('chat_messages');

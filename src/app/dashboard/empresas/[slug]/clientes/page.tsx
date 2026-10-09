@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getEmpresaBySlug } from '@/config/empresas.config';
+import { useEmpresa } from '@/hooks/useEmpresa';
 
 interface Cliente {
   id: string;
@@ -34,15 +34,18 @@ export default function ClientesEmpresaPage() {
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [isLoadingLinks, setIsLoadingLinks] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [showNovoCliente, setShowNovoCliente] = useState(false);
+  const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', telefone: '', cpf: '' });
+  const [isSavingCliente, setIsSavingCliente] = useState(false);
 
-  const empresa = getEmpresaBySlug(empresaSlug);
+  const { empresa, carregandoEmpresa } = useEmpresa(empresaSlug);
   
   const fetchClientes = useCallback(async (page: number) => {
     if (!empresa) return;
     
     try {
       setLoading(true);
-      const response = await fetch(`/api/${empresaSlug}/clientes?page=${page}&limit=10`);
+      const response = await fetch(`/api/empresas/${empresaSlug}/clientes?page=${page}&limit=10`);
       const data = await response.json();
       setClientes(data.clientes || []);
       setTotalPaginas(data.paginacao?.total_paginas || 1);
@@ -61,7 +64,7 @@ export default function ClientesEmpresaPage() {
   const openLinkModal = async (cliente: Cliente) => {
     setIsLoadingLinks(true);
     try {
-      const response = await fetch(`/api/${empresaSlug}/clientes/${cliente.id}`);
+      const response = await fetch(`/api/empresas/${empresaSlug}/clientes/${cliente.id}`);
       
       if (!response.ok) {
         throw new Error('Erro ao buscar links');
@@ -90,9 +93,7 @@ export default function ClientesEmpresaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           clienteId: selectedCliente.id,
-          clienteCpf: selectedCliente.cpf,
-          empresaId: empresa.id,
-          empresaSlug: empresa.slug
+          empresaId: empresa.id
         }),
       });
 
@@ -103,7 +104,7 @@ export default function ClientesEmpresaPage() {
       }
 
       // Recarrega os links do cliente
-      const linksResponse = await fetch(`/api/${empresaSlug}/clientes/${selectedCliente.id}`);
+      const linksResponse = await fetch(`/api/empresas/${empresaSlug}/clientes/${selectedCliente.id}`);
       
       if (linksResponse.ok) {
         const data = await linksResponse.json();
@@ -118,6 +119,39 @@ export default function ClientesEmpresaPage() {
       setIsGeneratingLink(false);
     }
   };
+
+  const handleCriarCliente = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSavingCliente) return;
+
+    setIsSavingCliente(true);
+    try {
+      const response = await fetch(`/api/empresas/${empresaSlug}/clientes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novoCliente),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error?.error || 'Erro ao cadastrar cliente');
+        return;
+      }
+
+      setNovoCliente({ nome: '', email: '', telefone: '', cpf: '' });
+      setShowNovoCliente(false);
+      await fetchClientes(paginaAtual);
+    } catch (error) {
+      console.error('Erro ao cadastrar cliente:', error);
+      alert('Erro ao cadastrar cliente. Tente novamente.');
+    } finally {
+      setIsSavingCliente(false);
+    }
+  };
+
+  if (carregandoEmpresa) {
+    return <div className="p-8 text-gray-600">Carregando...</div>;
+  }
 
   if (!empresa) {
     return (
@@ -199,8 +233,54 @@ export default function ClientesEmpresaPage() {
         <p className="text-gray-600 mt-1">
           Lista completa de clientes da {empresa.nome}
         </p>
+        <button
+          onClick={() => setShowNovoCliente(!showNovoCliente)}
+          className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium"
+          style={{ backgroundColor: empresa.cor }}
+        >
+          {showNovoCliente ? 'Cancelar' : 'Novo cliente'}
+        </button>
       </div>
 
+      {showNovoCliente && (
+        <form onSubmit={handleCriarCliente} className="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input
+            required
+            placeholder="Nome"
+            value={novoCliente.nome}
+            onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+          />
+          <input
+            required
+            type="email"
+            placeholder="Email"
+            value={novoCliente.email}
+            onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+          />
+          <input
+            placeholder="Telefone"
+            value={novoCliente.telefone}
+            onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+          />
+          <input
+            placeholder="CPF"
+            value={novoCliente.cpf}
+            onChange={(e) => setNovoCliente({ ...novoCliente, cpf: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+          />
+          <button
+            type="submit"
+            disabled={isSavingCliente}
+            className="sm:col-span-2 px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
+            style={{ backgroundColor: empresa.cor }}
+          >
+            {isSavingCliente ? 'Salvando...' : 'Cadastrar cliente'}
+          </button>
+        </form>
+      )}
 
 
       {/* Main Content */}
@@ -223,7 +303,7 @@ export default function ClientesEmpresaPage() {
           <div className="bg-white p-12 rounded-lg shadow text-center">
             <p className="text-gray-600 text-lg">Nenhum cliente cadastrado ainda.</p>
             <p className="text-sm text-gray-500 mt-2">
-              Adicione clientes manualmente no banco de dados para a empresa ID: <code className="bg-gray-200 px-2 py-1 rounded">{empresa.id}</code>
+              Use o botão Novo cliente para cadastrar o primeiro.
             </p>
           </div>
         ) : (

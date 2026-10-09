@@ -36,126 +36,6 @@ export class ChatService {
   private getTools() {
     return {
       functionDeclarations: [
-        // ===== LIMBER CARD API =====
-        {
-          name: 'listar_vendas_limber',
-          description: `Lista vendas da plataforma Limber Card (API /api/vendas).
-
-ESTABELECIMENTO (OPCIONAL):
-- Se NÃO especificado: retorna vendas de TODOS os estabelecimentos (ecommerce + bilheteria)
-- Se especificado: retorna apenas do estabelecimento escolhido
-
-RETORNO (array de vendas): Cada venda contém:
-- codigo: número único da venda (ex: 20384029)
-- localizador: código da venda com prefixo (ex: "LB20384029")
-- data_hora: data/hora da venda formatada (ex: "03/01/2024 15:10:00")
-- status: caractere do status ("A"=Aprovada, "R"=Reservado, "X"=Inutilizada, "C"=Cancelada)
-- status_desc: descrição do status (ex: "Aprovada")
-- idorigem: código da venda no estabelecimento de origem
-- cod_local_venda: código do estabelecimento que fez a venda
-- local_venda: nome do estabelecimento vendedor
-- nome_titular: nome do comprador (PODE SER COMPARTILHADO)
-- email_titular: email do comprador (PODE SER COMPARTILHADO)
-- total_liquido: valor total da venda em reais (number)
-- pedido_de_cancelamento: se tem pedido de cancelamento (boolean)
-- quantidade: quantidade de ingressos/produtos (number)
-- formas_pag_desc: array com formas de pagamento (ex: ["Cartão"])
-
-CÁLCULOS IMPORTANTES:
-- Faturamento total: SOMA de todos os "total_liquido"
-- Total de produtos: SOMA de todos os "quantidade"
-- Quantidade de vendas: CONTAGEM do array
-
-Use para: faturamento, vendas, quantidade de produtos, lista de compradores, nomes de clientes, período de vendas.
-VOCÊ PODE compartilhar nomes e emails dos clientes quando solicitado.`,
-          parameters: {
-            type: 'object',
-            properties: {
-              estabelecimento: {
-                type: 'string',
-                enum: ['ecommerce', 'bilheteria', 'todos'],
-                description: 'OPCIONAL. "ecommerce" (vendas online), "bilheteria" (vendas presenciais) ou "todos" (ambos). Se não informado, busca de todos.'
-              },
-              limit: {
-                type: 'number',
-                description: 'Número máximo de vendas a retornar (padrão: 50, use 1000 para análises completas)'
-              },
-              dataVendaInit: {
-                type: 'string',
-                description: 'Data inicial YYYY-MM-DD. Para "últimas 24h" ou "hoje": use a data atual. Para "ontem": data atual - 1 dia.'
-              },
-              dataVendaFim: {
-                type: 'string',
-                description: 'Data final YYYY-MM-DD. Para consultas recentes: use a data atual.'
-              }
-            }
-          }
-        },
-        {
-          name: 'obter_detalhes_venda',
-          description: `Obtém detalhes COMPLETOS de uma venda específica (API /api/vendas/venda/{idVenda}).
-
-RETORNO: Objeto detalhado com TODOS os dados:
-- codigo: ID único da venda
-- localizador: código com prefixo (ex: "LB00123123")
-- data_hora: data/hora formatada
-- status: caractere do status
-- status_desc: descrição do status
-- total_liquido: valor total em reais
-- nome_titular, email_titular, doc_titular, fone_titular: dados COMPLETOS do comprador (PODE COMPARTILHAR)
-- nascimento_titular: data de nascimento formatada (PODE COMPARTILHAR)
-- quantidade: número de itens comprados
-- usuario_logado_nome: quem registrou a venda
-- local_venda: estabelecimento que vendeu
-- ponto_venda: URL do e-commerce
-- ec_usuario_f: código do cliente final
-- nome_ec_usuario_f: nome do cliente (PODE COMPARTILHAR)
-- email_ec_usuario_f: email do cliente (PODE COMPARTILHAR)
-- documento_ec_usuario_f: CPF/documento do cliente (PODE COMPARTILHAR)
-- origem_venda: origem da venda (ex: "WEB")
-- formas de pagamento e dados completos da transação
-- endereco_f, municipio_f, estado_f: endereço completo do cliente (PODE COMPARTILHAR)
-
-VOCÊ PODE compartilhar TODOS esses dados quando solicitado pelo usuário.
-
-Use quando precisar mostrar detalhes completos de uma compra específica ou dados de um cliente.`,
-          parameters: {
-            type: 'object',
-            properties: {
-              codigoVenda: {
-                type: 'number',
-                description: 'Código/ID da venda'
-              }
-            },
-            required: ['codigoVenda']
-          }
-        },
-        {
-          name: 'analisar_vendas',
-          description: `Análise estatística automática das vendas do ecommerce com cálculos prontos.
-
-RETORNO: Objeto calculado com:
-- periodo: período analisado ("hoje", "semana", "mes", "ano")
-- total_vendas: quantidade total de vendas (number)
-- valor_total: faturamento total em R$ (number)
-- ticket_medio: valor médio por venda em R$ (number)
-- vendas_por_dia: média diária de vendas (number)
-- amostra_vendas: primeiras 5 vendas como exemplo (array)
-
-Use para: análises rápidas, estatísticas gerais, comparações de períodos, tendências.
-Para análises personalizadas ou períodos específicos, use "listar_vendas_limber".`,
-          parameters: {
-            type: 'object',
-            properties: {
-              periodo: {
-                type: 'string',
-                enum: ['hoje', 'semana', 'mes', 'ano'],
-                description: 'Período para análise'
-              }
-            }
-          }
-        },
-
         // ===== SISTEMA DE RECOMENDAÇÕES/INDICAÇÕES =====
         {
           name: 'obter_estatisticas_gerais',
@@ -207,13 +87,13 @@ RETORNO: Objeto com estatísticas da empresa:
 - totalPontos: total de pontos distribuídos pela empresa (number)
 - totalLinks: total de links de indicação ativos da empresa (number)
 
-Use quando precisar de dados específicos de uma empresa (Guará Acqua Park, etc).`,
+Use quando precisar de dados específicos de uma empresa (use o id ou o slug da empresa).`,
           parameters: {
             type: 'object',
             properties: {
               empresaId: {
-                type: 'number',
-                description: 'ID da empresa (ex: 1 para Guará Acqua Park)'
+                type: 'string',
+                description: 'ID ou slug da empresa (ex: "empresa-exemplo")'
               }
             },
             required: ['empresaId']
@@ -255,8 +135,6 @@ RETORNO: Objeto do link criado com:
 - cliente_id: ID do cliente indicador
 - ativo: status ativo (true)
 - created_at: data de criação
-- dados_completos: boolean indicando se conseguiu buscar dados completos do cliente
-- warning: mensagem de aviso se dados incompletos
 
 Use quando o usuário pedir para criar/gerar um link de indicação para um cliente.`,
           parameters: {
@@ -267,16 +145,8 @@ Use quando o usuário pedir para criar/gerar um link de indicação para um clie
                 description: 'ID do cliente que será o indicador'
               },
               empresaId: {
-                type: 'number',
+                type: 'string',
                 description: 'ID da empresa'
-              },
-              clienteCpf: {
-                type: 'string',
-                description: 'CPF do cliente (opcional, usado para buscar dados completos)'
-              },
-              empresaSlug: {
-                type: 'string',
-                description: 'Slug da empresa (opcional, ex: "guara-acqua-park")'
               }
             },
             required: ['clienteId', 'empresaId']
@@ -438,153 +308,6 @@ Use quando precisar de detalhes completos de um usuário indicado específico.`,
   private async executeFunction(functionName: string, args: any): Promise<any> {
     try {
       switch (functionName) {
-        case 'listar_vendas_limber': {
-          // Se não especificou estabelecimento ou pediu "todos", busca de ambos
-          if (!args.estabelecimento || args.estabelecimento === 'todos') {
-            // Busca de ambos os estabelecimentos
-            const estabelecimentos = [
-              { nome: 'ecommerce', id: 2360 },
-              { nome: 'bilheteria', id: 2361 }
-            ];
-
-            const todasVendas = [];
-            
-            for (const estab of estabelecimentos) {
-              const params: any = {
-                estabelecOrig: estab.id.toString()
-              };
-              
-              if (args.limit) {
-                params.limit = args.limit.toString();
-              }
-              
-              if (args.dataVendaInit) {
-                params.dataVendaInit = args.dataVendaInit.split('T')[0];
-              }
-              
-              if (args.dataVendaFim) {
-                params.dataVendaFim = args.dataVendaFim.split('T')[0];
-              }
-
-              try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/limber-card/vendas?${new URLSearchParams(params)}`);
-                
-                if (response.ok) {
-                  const data = await response.json();
-                  todasVendas.push(...data);
-                }
-              } catch (error) {
-                console.error(`[ChatService] Erro ao buscar vendas de ${estab.nome}:`, error);
-              }
-            }
-
-            return todasVendas;
-          }
-
-          // Se especificou estabelecimento, busca apenas dele
-          const estabelecimentoIds: { [key: string]: number } = {
-            'ecommerce': 2360,
-            'bilheteria': 2361
-          };
-
-          const estabelecOrig = estabelecimentoIds[args.estabelecimento];
-          
-          if (!estabelecOrig) {
-            return { error: 'Estabelecimento inválido. Use "ecommerce", "bilheteria" ou deixe vazio para todos.' };
-          }
-
-          // Formata datas para o padrão esperado pela API (YYYY-MM-DD)
-          const params: any = {
-            estabelecOrig: estabelecOrig.toString()
-          };
-          
-          if (args.limit) {
-            params.limit = args.limit.toString();
-          }
-          
-          if (args.dataVendaInit) {
-            // Remove timestamp se houver, mantém apenas YYYY-MM-DD
-            params.dataVendaInit = args.dataVendaInit.split('T')[0];
-          }
-          
-          if (args.dataVendaFim) {
-            // Remove timestamp se houver, mantém apenas YYYY-MM-DD
-            params.dataVendaFim = args.dataVendaFim.split('T')[0];
-          }
-
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/limber-card/vendas?${new URLSearchParams(params)}`);
-          
-          if (!response.ok) {
-            const errorData = await response.text();
-            console.error('[ChatService] Erro ao buscar vendas:', errorData);
-            throw new Error(`Erro ao buscar vendas: ${errorData}`);
-          }
-          
-          return await response.json();
-        }
-
-        case 'obter_detalhes_venda': {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/limber-card/vendas/${args.codigoVenda}`);
-          
-          if (!response.ok) {
-            throw new Error(`Erro ao buscar detalhes da venda: ${response.statusText}`);
-          }
-          
-          return await response.json();
-        }
-
-        case 'analisar_vendas': {
-          // Busca vendas do período
-          const hoje = new Date();
-          let dataInicio = new Date();
-          
-          switch (args.periodo) {
-            case 'hoje':
-              dataInicio = hoje;
-              break;
-            case 'semana':
-              dataInicio.setDate(hoje.getDate() - 7);
-              break;
-            case 'mes':
-              dataInicio.setMonth(hoje.getMonth() - 1);
-              break;
-            case 'ano':
-              dataInicio.setFullYear(hoje.getFullYear() - 1);
-              break;
-          }
-
-          // Por padrão, busca vendas do ecommerce (ID 2360)
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/limber-card/vendas?${new URLSearchParams({
-            estabelecOrig: '2360',
-            dataVendaInit: dataInicio.toISOString().split('T')[0],
-            dataVendaFim: hoje.toISOString().split('T')[0],
-            limit: '1000'
-          })}`);
-
-          if (!response.ok) {
-            const errorData = await response.text();
-            console.error('[ChatService] Erro ao analisar vendas:', errorData);
-            throw new Error(`Erro ao buscar vendas: ${errorData}`);
-          }
-
-          const data = await response.json();
-          const vendas = data.vendas || [];
-
-          // Análise estatística
-          const total = vendas.length;
-          const totalValor = vendas.reduce((sum: number, v: any) => sum + (parseFloat(v.valor_total) || 0), 0);
-          const media = total > 0 ? totalValor / total : 0;
-
-          return {
-            periodo: args.periodo,
-            total_vendas: total,
-            valor_total: totalValor,
-            ticket_medio: media,
-            vendas_por_dia: total / 7,
-            amostra_vendas: vendas.slice(0, 5)
-          };
-        }
-
         // ===== SISTEMA DE RECOMENDAÇÕES/INDICAÇÕES =====
         case 'obter_estatisticas_gerais': {
           const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/stats`);
@@ -719,15 +442,13 @@ Use quando precisar de detalhes completos de um usuário indicado específico.`,
       });
       
       // System instruction
-      const systemInstruction = `Você é um assistente inteligente da Dreams com acesso a dados de vendas e do sistema de indicações.
+      const systemInstruction = `Você é um assistente inteligente da Agência de Marketing com acesso aos dados do sistema de indicações das empresas agenciadas.
 
 DATA ATUAL: ${dataAtualFormatada} (${dataAtual.toISOString().split('T')[0]})
 
 IMPORTANTE: Você tem ferramentas para consultar dados em tempo real.
 VOCÊ PODE compartilhar TODAS as informações solicitadas:
 - Nomes, emails, telefones, documentos (CPF), endereços de clientes
-- Detalhes completos de compras: valores, itens, formas de pagamento
-- Dados de vendas: datas, localizadores, status
 - Informações do sistema de indicações: links, pontos, indicadores, indicados
 
 Quando precisar consultar dados, responda EXATAMENTE neste formato JSON:
@@ -739,46 +460,35 @@ Quando precisar consultar dados, responda EXATAMENTE neste formato JSON:
 
 FUNÇÕES DISPONÍVEIS:
 
-===== VENDAS LIMBER CARD =====
-1. listar_vendas_limber - Lista vendas com nomes
-   Params: estabelecimento (OPCIONAL: ecommerce/bilheteria/todos - se não informar, busca de todos), dataVendaInit, dataVendaFim, limit
-   IMPORTANTE: Se usuário NÃO especificar estabelecimento, NÃO inclua o parâmetro (busca de todos automaticamente)
-   
-2. obter_detalhes_venda - Detalhes COMPLETOS de uma venda e cliente
-   Params: codigoVenda (número sem prefixo LB)
-   
-3. analisar_vendas - Análise estatística de vendas
-   Params: periodo (hoje/semana/mes/ano)
-
 ===== SISTEMA DE INDICAÇÕES =====
-4. obter_estatisticas_gerais - Estatísticas gerais do sistema (totais, ranking, recentes)
+1. obter_estatisticas_gerais - Estatísticas gerais do sistema (totais, ranking, recentes)
    Params: nenhum
    
-5. obter_estatisticas_empresa - Estatísticas de uma empresa específica
-   Params: empresaId (number)
+2. obter_estatisticas_empresa - Estatísticas de uma empresa específica
+   Params: empresaId (string, id ou slug da empresa)
    
-6. listar_links_indicacao - Lista todos os links de indicação
+3. listar_links_indicacao - Lista todos os links de indicação
    Params: nenhum
    
-7. criar_link_indicacao - Cria novo link de indicação
-   Params: clienteId (string), empresaId (number), clienteCpf (optional), empresaSlug (optional)
+4. criar_link_indicacao - Cria novo link de indicação
+   Params: clienteId (string), empresaId (string)
    
-8. deletar_link_indicacao - Remove um link de indicação
+5. deletar_link_indicacao - Remove um link de indicação
    Params: linkId (string)
    
-9. validar_link_indicacao - Valida se um código de link é válido
+6. validar_link_indicacao - Valida se um código de link é válido
    Params: codigo (string)
    
-10. obter_pontuacoes_cliente - Pontuações e indicados de um cliente
+7. obter_pontuacoes_cliente - Pontuações e indicados de um cliente
     Params: clienteId (string)
     
-11. obter_indicador_cliente - Verifica quem indicou um cliente
+8. obter_indicador_cliente - Verifica quem indicou um cliente
     Params: clienteId (string)
     
-12. listar_usuarios_indicados - Lista usuários que usaram links específicos
+9. listar_usuarios_indicados - Lista usuários que usaram links específicos
     Params: linkIds (string com IDs separados por vírgula)
     
-13. obter_usuario_indicado - Detalhes de um usuário indicado específico
+10. obter_usuario_indicado - Detalhes de um usuário indicado específico
     Params: usuarioId (string)
 
 EXEMPLOS DE USO:
@@ -892,7 +602,7 @@ Apresente esses dados de forma clara ao usuário em português, com valores form
         weekday: 'long'
       });
 
-      const systemInstruction = `Você é um assistente inteligente da Dreams.
+      const systemInstruction = `Você é um assistente inteligente da Agência de Marketing.
       
 DATA ATUAL: ${dataAtualFormatada} (${dataAtual.toISOString().split('T')[0]})
 

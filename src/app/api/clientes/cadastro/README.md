@@ -6,10 +6,10 @@ POST /api/clientes/cadastro
 ```
 
 ## Descrição
-Cadastra um novo cliente via API do Guará e registra o mapeamento de indicação.
+Cadastra um novo cliente via sistema externo da empresa e registra o mapeamento de indicação.
 
 ## Status Atual
-⚠️ **MODO SIMULAÇÃO** - A chamada à API do Guará está sendo simulada até o endpoint estar disponível.
+⚠️ **MODO SIMULAÇÃO** - A chamada à sistema externo está sendo simulada até o endpoint estar disponível.
 
 ## Request Body
 ```json
@@ -19,7 +19,7 @@ Cadastra um novo cliente via API do Guará e registra o mapeamento de indicaçã
   "telefone": "61999999999",
   "cpf": "12345678900",
   "link_codigo": "ABC123XYZ",
-  "empresa_id": "guara"
+  "empresa_id": "empresa-exemplo-001"
 }
 ```
 
@@ -27,7 +27,7 @@ Cadastra um novo cliente via API do Guará e registra o mapeamento de indicaçã
 - `nome`: Nome completo do cliente
 - `email`: Email do cliente
 - `link_codigo`: Código do link de indicação usado
-- `empresa_id`: ID da empresa (ex: "guara")
+- `empresa_id`: ID da empresa (ex: "empresa-exemplo-001")
 
 ## Campos Opcionais
 - `telefone`: Telefone do cliente
@@ -38,7 +38,7 @@ Cadastra um novo cliente via API do Guará e registra o mapeamento de indicaçã
 1. **Validação dos dados de entrada**
 2. **Busca do link de indicação** na tabela `links`
 3. **Validação do link** (ativo e pertence à empresa)
-4. **🔄 SIMULAÇÃO: Cadastro na API do Guará**
+4. **🔄 SIMULAÇÃO: Cadastro na sistema externo**
    - Gera ID mock no formato `MOCK_xxxxxxxx`
    - Simula delay de 500ms
 5. **Registro na tabela `indicacoes`**
@@ -112,13 +112,13 @@ Pode ser configurado futuramente por empresa ou tipo de indicação.
 
 ## Migração para API Real
 
-Quando o endpoint do Guará estiver pronto, descomentar o bloco de código real:
+Quando o endpoint do sistema externo estiver pronto, descomentar o bloco de código real:
 
 ```typescript
-const guaraResponse = await fetch('https://api.guarapark.app/v3/thirdy-party/clientes', {
+const respostaExterna = await fetch('https://api.exemplo.com/clientes', {
   method: 'POST',
   headers: {
-    'Authorization': `Bearer ${process.env.GUARA_API_TOKEN}`,
+    'Authorization': `Bearer ${process.env.EMPRESA_API_TOKEN}`,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -129,8 +129,8 @@ const guaraResponse = await fetch('https://api.guarapark.app/v3/thirdy-party/cli
   })
 });
 
-const guaraData = await guaraResponse.json();
-const clienteGuaraId = guaraData.cliente_id;
+const dadosExternos = await respostaExterna.json();
+const clienteExternoId = dadosExternos.cliente_id;
 ```
 
 E remover:
@@ -151,7 +151,7 @@ curl -X POST http://localhost:3000/api/clientes/cadastro \
     "telefone": "61988887777",
     "cpf": "98765432100",
     "link_codigo": "XYZ789ABC",
-    "empresa_id": "guara"
+    "empresa_id": "empresa-exemplo-001"
   }'
 ```
 
@@ -168,7 +168,7 @@ const response = await fetch('/api/clientes/cadastro', {
     telefone: '61988887777',
     cpf: '98765432100',
     link_codigo: 'XYZ789ABC',
-    empresa_id: 'guara'
+    empresa_id: 'empresa-exemplo-001'
   })
 });
 
@@ -184,8 +184,8 @@ const data = await response.json();
 
 Durante execução, você verá:
 ```
-🔄 [SIMULADO] Cadastrando cliente na API Guará: { ... }
-✅ [SIMULADO] Cliente cadastrado no Guará com ID: MOCK_xxxxxxxx
+🔄 [SIMULADO] Cadastrando cliente na sistema externo: { ... }
+✅ [SIMULADO] Cliente cadastrado no sistema externo com ID: MOCK_xxxxxxxx
 ✅ Indicação registrada: uuid-da-indicacao
 ✅ Pontuações registradas
 ```

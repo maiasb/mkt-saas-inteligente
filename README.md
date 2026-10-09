@@ -1,6 +1,6 @@
-# Dreams - Painel Administrativo
+# Agência de Marketing - Painel Administrativo
 
-Sistema de recomendações e premiações da agência Dreams para empresas parceiras.
+Sistema de recomendações e premiações da Agência de Marketing para as empresas agenciadas.
 
 ## 🚀 Funcionalidades
 
@@ -40,98 +40,38 @@ npm start
 
 ## 🏗️ Arquitetura
 
-O sistema utiliza uma arquitetura modular onde cada empresa possui sua própria estrutura isolada:
-
-### Estrutura de Módulos
+Empresas são cadastradas dinamicamente (tabela `empresas`), cada uma com suas regras de negócio. Os módulos são genéricos e recebem a empresa como parâmetro:
 
 ```
-src/modules/{empresa-slug}/
-├── {empresa}.repository.ts  # Acesso aos dados
-├── {empresa}.service.ts     # Lógica de negócio
-├── {empresa}.controller.ts  # Camada HTTP
-└── index.ts                 # Exportações
+src/modules/empresas/            # CRUD de empresas e regras
+src/modules/programa-indicacao/  # clientes, indicações e dashboard por empresa
 ```
 
-### Empresas Configuradas
-
-- **Guará Acqua Park** (`guara-acqua-park`)
-  - Limite: 10 indicações por mês por cliente
-  - Recompensa: R$ 50,00 por conversão
-  
-- **Dreams Agency** (`dreams-agency`)
-  - Sistema básico de indicações
-  - Em desenvolvimento
-
-Consulte [docs/MODULES_ARCHITECTURE.md](docs/MODULES_ARCHITECTURE.md) para detalhes completos sobre a arquitetura.
+Consulte [docs/MODULES_ARCHITECTURE.md](docs/MODULES_ARCHITECTURE.md) para detalhes completos.
 
 ## 🔑 Credenciais de Teste
 
-- **Email**: admin@dreams.com
+- **Email**: admin@agencia.com
 - **Senha**: admin123
-
-## 📁 Estrutura do Projeto
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── empresas/
-│   │   │   └── lista/          # Agregador de empresas
-│   │   ├── guara-acqua-park/   # APIs Guará
-│   │   │   ├── clientes/
-│   │   │   ├── indicacoes/
-│   │   │   └── stats/
-│   │   └── dreams-agency/      # APIs Dreams
-│   │       ├── clientes/
-│   │       └── stats/
-│   ├── dashboard/
-│   │   ├── empresas/
-│   │   │   └── [slug]/
-│   │   │       └── clientes/
-│   │   ├── links/
-│   │   └── page.tsx
-│   ├── login/
-│   └── ref/[codigo]/           # Landing page de indicação
-├── components/
-│   └── Sidebar.tsx
-├── config/
-│   └── empresas.config.ts      # Registro hard-coded de empresas
-├── lib/
-│   └── db.ts                   # Cliente MySQL
-└── modules/
-    ├── guara-acqua-park/       # Módulo Guará
-    │   ├── guara.repository.ts
-    │   ├── guara.service.ts
-    │   ├── guara.controller.ts
-    │   └── index.ts
-    └── dreams-agency/          # Módulo Dreams
-        ├── dreams.repository.ts
-        ├── dreams.service.ts
-        ├── dreams.controller.ts
-        └── index.ts
-```
 
 ## 🎯 API Endpoints
 
-### Empresas
-- `GET /api/empresas/lista` - Lista todas empresas com estatísticas
-
-### Guará Acqua Park
-- `GET /api/guara-acqua-park/clientes` - Lista clientes
-- `GET /api/guara-acqua-park/clientes/[id]` - Busca cliente específico
-- `POST /api/guara-acqua-park/indicacoes` - Cria indicação
-- `GET /api/guara-acqua-park/stats` - Estatísticas
-
-### Dreams Agency
-- `GET /api/dreams-agency/clientes` - Lista clientes
-- `GET /api/dreams-agency/clientes/[id]` - Busca cliente específico
-- `GET /api/dreams-agency/stats` - Estatísticas
+- `GET /api/empresas` - Lista empresas ativas com estatísticas (`?todas=1` inclui inativas)
+- `POST /api/empresas` - Cadastra empresa (dados + regras)
+- `GET /api/empresas/[slug]` - Busca empresa
+- `PUT /api/empresas/[slug]` - Atualiza dados e regras
+- `GET /api/empresas/[slug]/clientes` - Lista clientes
+- `POST /api/empresas/[slug]/clientes` - Cadastra cliente
+- `GET /api/empresas/[slug]/clientes/[id]` - Busca cliente
+- `GET /api/empresas/[slug]/indicacoes` - Lista indicações
+- `GET /api/empresas/[slug]/dashboard` - Dados do dashboard
+- `GET /api/empresas/[slug]/stats` - Estatísticas (aceita slug ou id)
 
 ## 🎨 Features Implementadas
 
 ### Gestão de Empresas
-- Cadastro hard-coded no código
-- Cada empresa com módulo isolado
+- Cadastro dinâmico pela tela *Gerenciar empresas*
+- Regras de negócio por empresa (pontos, recompensa, limite)
 - Estatísticas agregadas
 - Interface com cores temáticas
 
@@ -149,16 +89,10 @@ src/
 
 ## 📝 Como Adicionar Nova Empresa
 
-1. **Configuração**: Adicione em `src/config/empresas.config.ts`
-2. **Módulo**: Crie pasta `src/modules/{empresa-slug}/` com Repository, Service e Controller
-3. **APIs**: Crie rotas em `src/app/api/{empresa-slug}/`
-4. **Banco**: Insira registro na tabela `empresas`
-
-Consulte a [documentação de arquitetura](docs/MODULES_ARCHITECTURE.md) para guia detalhado.
+Acesse **Gerenciar empresas** (`/dashboard/configuracoes/empresas`) ou use `POST /api/empresas`. Não é preciso alterar código.
 
 ## 🎯 Próximos Passos
 
-- [ ] Popular banco de dados com empresas
 - [ ] Implementar autenticação JWT
 - [ ] Sistema de notificações
 - [ ] Criar mais empresas no sistema
@@ -167,4 +101,4 @@ Consulte a [documentação de arquitetura](docs/MODULES_ARCHITECTURE.md) para gu
 
 ## 📄 Licença
 
-Projeto privado - Dreams Agency
+Projeto privado

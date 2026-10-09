@@ -31,7 +31,7 @@ export default function ChatIAPage() {
         // Fallback para mensagem inicial
         setMessages([{
           role: 'assistant',
-          content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
+          content: 'Olá! Sou o assistente virtual da Agência de Marketing. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
           timestamp: new Date(),
         }]);
       }
@@ -39,7 +39,7 @@ export default function ChatIAPage() {
       // Mensagem inicial
       setMessages([{
         role: 'assistant',
-        content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
+        content: 'Olá! Sou o assistente virtual da Agência de Marketing. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
         timestamp: new Date(),
       }]);
     }
@@ -167,7 +167,7 @@ export default function ChatIAPage() {
       localStorage.removeItem('chat_messages');
       setMessages([{
         role: 'assistant',
-        content: 'Olá! Sou o assistente virtual da Dreams. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
+        content: 'Olá! Sou o assistente virtual da Agência de Marketing. Posso ajudar você consultando dados em tempo real do sistema, incluindo vendas da Limber Card. Como posso ajudar?',
         timestamp: new Date(),
       }]);
     }

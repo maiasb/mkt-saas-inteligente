@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { getEmpresaById } from '@/config/empresas.config';
+import { empresasService } from '@/modules/empresas';
 
 export async function GET(
   request: NextRequest,
@@ -24,10 +24,9 @@ export async function GET(
 
     const link: any = links[0];
     
-    // Busca empresa da config (hard-coded)
-    const empresa = getEmpresaById(link.empresa_id);
+    const empresa = await empresasService.buscarPorId(link.empresa_id);
     
-    if (!empresa) {
+    if (!empresa || !empresa.ativo) {
       return NextResponse.json(
         { error: 'Empresa não encontrada' },
         { status: 404 }

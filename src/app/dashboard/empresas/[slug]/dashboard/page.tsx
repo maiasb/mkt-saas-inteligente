@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getEmpresaBySlug } from '@/config/empresas.config';
+import { useEmpresa } from '@/hooks/useEmpresa';
 
 interface DashboardData {
   resumo: {
@@ -35,7 +35,7 @@ export default function EmpresaDashboardPage() {
   const [erro, setErro] = useState('');
   const [dados, setDados] = useState<DashboardData | null>(null);
 
-  const empresa = getEmpresaBySlug(slug);
+  const { empresa, carregandoEmpresa } = useEmpresa(slug);
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -43,7 +43,7 @@ export default function EmpresaDashboardPage() {
         setLoading(true);
         setErro('');
         
-        const response = await fetch(`/api/${slug}/dashboard`);
+        const response = await fetch(`/api/empresas/${slug}/dashboard`);
         
         if (!response.ok) {
           throw new Error('Erro ao carregar dados do dashboard');
@@ -61,6 +61,10 @@ export default function EmpresaDashboardPage() {
 
     carregarDados();
   }, [slug]);
+
+  if (carregandoEmpresa) {
+    return <div className="p-8 text-gray-600">Carregando...</div>;
+  }
 
   if (!empresa) {
     return (
