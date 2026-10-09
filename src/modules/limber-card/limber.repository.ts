@@ -50,6 +50,7 @@ interface Venda {
 
 interface ListarVendasParams {
   estabelecOrig?: number;
+  limit?: number;
   dataVendaInit?: string;
   dataVendaFim?: string;
   dataVisitaInit?: string;
@@ -149,6 +150,10 @@ export class LimberCardRepository {
       
       if (params.estabelecOrig) {
         queryParams.append('estabelecOrig', params.estabelecOrig.toString());
+      }
+      
+      if (params.limit) {
+        queryParams.append('limit', params.limit.toString());
       }
       
       // Datas no formato YYYY-MM-DD (ISO 8601)

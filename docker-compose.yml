@@ -52,6 +52,8 @@ services:
       LIMBER_CARD_API_URL: ${LIMBER_CARD_API_URL:-}
       LIMBER_CARD_USER: ${LIMBER_CARD_USER:-}
       LIMBER_CARD_PASSWORD: ${LIMBER_CARD_PASSWORD:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:
